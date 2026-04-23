@@ -1,10 +1,32 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Navbar } from '@/components/ui/Navbar'
 import { cn } from '@/lib/utils'
 
-const PAIRS = [
+type Pair = {
+  label: string
+  price: string
+  change: string
+  up: boolean
+  color: string
+}
+
+// CoinGecko ID → display metadata (order controls the ticker order)
+const COIN_META: { id: string; label: string; color: string }[] = [
+  { id: 'bitcoin',       label: 'BTC/USDT',  color: '#f7931a' },
+  { id: 'ethereum',      label: 'ETH/USDT',  color: '#627eea' },
+  { id: 'solana',        label: 'SOL/USDT',  color: '#9945ff' },
+  { id: 'binancecoin',   label: 'BNB/USDT',  color: '#f3ba2f' },
+  { id: 'ripple',        label: 'XRP/USDT',  color: '#346aa9' },
+  { id: 'cardano',       label: 'ADA/USDT',  color: '#4b9cd3' },
+  { id: 'dogecoin',      label: 'DOGE/USDT', color: '#c2a633' },
+  { id: 'avalanche-2',   label: 'AVAX/USDT', color: '#e84142' },
+]
+
+// Fallback values until the first live fetch completes
+const FALLBACK_PAIRS: Pair[] = [
   { label: 'BTC/USDT',  price: '103,247.50', change: '+2.34', up: true,  color: '#f7931a' },
   { label: 'ETH/USDT',  price: '3,891.22',   change: '+1.78', up: true,  color: '#627eea' },
   { label: 'SOL/USDT',  price: '182.64',      change: '-0.95', up: false, color: '#9945ff' },
@@ -14,7 +36,53 @@ const PAIRS = [
   { label: 'DOGE/USDT', price: '0.1823',      change: '+5.41', up: true,  color: '#c2a633' },
   { label: 'AVAX/USDT', price: '38.92',       change: '-2.17', up: false, color: '#e84142' },
 ]
-const PAIRS_DOUBLED = [...PAIRS, ...PAIRS]
+
+function formatPrice(p: number): string {
+  if (p >= 1000)  return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (p >= 1)     return p.toFixed(2)
+  return p.toFixed(4)
+}
+
+function useLivePrices(): Pair[] {
+  const [pairs, setPairs] = useState<Pair[]>(FALLBACK_PAIRS)
+
+  useEffect(() => {
+    let cancelled = false
+    const ids = COIN_META.map(c => c.id).join(',')
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
+
+    async function fetchPrices() {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        const next: Pair[] = COIN_META.map(c => {
+          const entry = data[c.id]
+          if (!entry) return FALLBACK_PAIRS.find(p => p.label === c.label)!
+          const price  = entry.usd as number
+          const change = entry.usd_24h_change as number
+          return {
+            label:  c.label,
+            price:  formatPrice(price),
+            change: `${change >= 0 ? '+' : ''}${change.toFixed(2)}`,
+            up:     change >= 0,
+            color:  c.color,
+          }
+        })
+        setPairs(next)
+      } catch {
+        /* keep previous values */
+      }
+    }
+
+    fetchPrices()
+    const id = setInterval(fetchPrices, 15_000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
+
+  return pairs
+}
 
 // Hero background video — local rotating globe
 const HERO_VIDEO = '/videos/rotating_globe.mp4'
@@ -34,16 +102,18 @@ function AnnouncementBadge() {
 }
 
 function SocialProofBar() {
+  const pairs = useLivePrices()
+  const doubled = [...pairs, ...pairs]
   return (
     <div className="relative z-10 w-full flex items-center gap-8 px-6 py-6 overflow-hidden">
       <div className="shrink-0 text-sm text-foreground/50 leading-snug">
         Live markets<br />available now
       </div>
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative group">
         <div className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-r from-background to-transparent" />
         <div className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-l from-background to-transparent" />
-        <div className="flex animate-marquee whitespace-nowrap gap-3">
-          {PAIRS_DOUBLED.map(({ label, price, change, up, color }, i) => (
+        <div className="flex animate-marquee whitespace-nowrap gap-3 group-hover:[animation-play-state:paused]">
+          {doubled.map(({ label, price, change, up, color }, i) => (
             <div key={`${label}-${i}`} className="flex items-center gap-3 shrink-0 liquid-glass rounded-full px-4 py-2">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
               <span className="text-sm font-semibold text-foreground/80 tracking-wide">{label}</span>
