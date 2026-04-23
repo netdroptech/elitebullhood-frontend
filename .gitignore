@@ -1,0 +1,11 @@
+/node_modules
+
+dist/
+dist-v15/
+
+.env
+.env.local
+
+uploads/
+
+*.log

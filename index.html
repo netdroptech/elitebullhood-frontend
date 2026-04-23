@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elitebullhood | Trade Smart. Grow Wealth.</title>
+
+  <!-- ── Google Translate – suppress default toolbar ── -->
+  <style>
+    /* Hide Google's injected top bar */
+    .goog-te-banner-frame.skiptranslate {
+      display: none !important;
+    }
+
+    body {
+      top: 0 !important;
+    }
+
+    /* Hide the "Translated by Google" popup badge */
+    .goog-te-gadget-icon,
+    .goog-logo-link,
+    .goog-te-gadget span,
+    #goog-gt-tt,
+    .goog-te-balloon-frame {
+      display: none !important;
+    }
+
+    /* Keep the hidden select wrapper invisible */
+    #google_translate_element {
+      display: none !important;
+    }
+
+    /* Smooth font rendering after translation */
+    .translated-ltr,
+    .translated-rtl {
+      font-family: inherit !important;
+    }
+  </style>
+
+
+
+</head>
+
+<body>
+  <!-- Hidden Google Translate mount point -->
+  <div id="google_translate_element"></div>
+
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+
+  <!-- ── Google Translate widget init ── -->
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement(
+        {
+          pageLanguage: 'en',
+          autoDisplay: false,
+          gaTrack: false,
+        },
+        'google_translate_element'
+      );
+    }
+  </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async
+    defer>
+    </script>
+
+
+
+
+</body>
+
+</html>
