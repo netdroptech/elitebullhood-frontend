@@ -21,6 +21,7 @@ export default defineConfig({
   build: {
     outDir: 'dist-v15',
     emptyOutDir: false,
+    chunkSizeWarningLimit: 1500,
     commonjsOptions: {
       include: [/node_modules/],
       transformMixedEsModules: true,

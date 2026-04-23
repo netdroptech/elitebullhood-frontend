@@ -176,7 +176,7 @@ export function AdminSettings() {
                 type="text"
                 value={address}
                 onChange={e => setAddress(e.target.value)}
-                placeholder="e.g. 123 Finance St, New York, NY 10001"
+                placeholder="e.g. Colorado 81147, USA"
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: '0.65rem 0.875rem 0.65rem 2.1rem',

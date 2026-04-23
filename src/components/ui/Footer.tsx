@@ -6,8 +6,8 @@ const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'
 export function Footer() {
   const { platformName, platformEmail } = usePlatformName()
   const [cookieDismissed, setCookieDismissed] = useState(false)
-  const [phone,   setPhone]   = useState('+1 (312) 741-9643')
-  const [address, setAddress] = useState('123 Finance St, New York, NY 10001')
+  const [phone,   setPhone]   = useState('+1 (812) 760-8730')
+  const [address, setAddress] = useState('Colorado 81147, USA')
 
   useEffect(() => {
     fetch(`${API}/admin/public/contact`)
