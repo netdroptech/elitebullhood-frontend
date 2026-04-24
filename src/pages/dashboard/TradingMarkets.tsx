@@ -52,21 +52,54 @@ interface PairData {
   volume:  number
 }
 
-// ── Binance 24hr ticker fetch ────────────────────────────────────────────
-const BINANCE_URL =
-  `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(SYMBOLS))}`
+// ── CoinGecko live price fetch ───────────────────────────────────────────
+// Binance API is rate-limited / geo-blocked from browsers in some regions,
+// which surfaced as "Offline — showing cached" in production. CoinGecko is
+// CORS-friendly, geo-unblocked, and gives us everything we need in one call.
+
+const SYMBOL_TO_CG: Record<string, string> = {
+  BTCUSDT:   'bitcoin',
+  ETHUSDT:   'ethereum',
+  BNBUSDT:   'binancecoin',
+  ADAUSDT:   'cardano',
+  XRPUSDT:   'ripple',
+  SOLUSDT:   'solana',
+  DOTUSDT:   'polkadot',
+  DOGEUSDT:  'dogecoin',
+  AVAXUSDT:  'avalanche-2',
+  MATICUSDT: 'matic-network',
+  LINKUSDT:  'chainlink',
+  LTCUSDT:   'litecoin',
+  UNIUSDT:   'uniswap',
+  ATOMUSDT:  'cosmos',
+  NEARUSDT:  'near',
+  APTUSDT:   'aptos',
+}
+const CG_TO_SYMBOL: Record<string, string> = Object.fromEntries(
+  Object.entries(SYMBOL_TO_CG).map(([k, v]) => [v, k]),
+)
+const CG_IDS = Object.values(SYMBOL_TO_CG).join(',')
+const COINGECKO_URL =
+  `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${CG_IDS}` +
+  `&order=market_cap_desc&per_page=50&page=1&price_change_percentage=24h`
 
 async function fetchLivePrices(): Promise<PairData[]> {
-  const res = await fetch(BINANCE_URL)
+  const res = await fetch(COINGECKO_URL)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[]).map((t) => ({
-    symbol: t.symbol as string,
-    price:  parseFloat(t.lastPrice),
-    change: parseFloat(t.priceChangePercent),
-    volume: parseFloat(t.quoteVolume),   // quoteVolume = USDT volume
-  }))
+  const data = await res.json() as Array<{
+    id: string
+    current_price: number
+    price_change_percentage_24h: number | null
+    total_volume: number
+  }>
+  return data
+    .map(c => ({
+      symbol: CG_TO_SYMBOL[c.id] ?? '',
+      price:  c.current_price ?? 0,
+      change: c.price_change_percentage_24h ?? 0,
+      volume: c.total_volume ?? 0,
+    }))
+    .filter(p => p.symbol) // drop any we didn't recognise
 }
 
 // ── Formatters ────────────────────────────────────────────────────────────
@@ -121,7 +154,7 @@ const FLASH_CSS = `
 `
 
 // ── Main component ─────────────────────────────────────────────────────────
-const REFRESH_SECS = 120 // 2 minutes
+const REFRESH_SECS = 20 // real-time feel, well within CoinGecko's free-tier limits
 
 export function TradingMarkets() {
   const navigate = useNavigate()
@@ -239,7 +272,7 @@ export function TradingMarkets() {
             letterSpacing: '-0.02em', lineHeight: 1.2,
           }}>Trade</h1>
           <p style={{ fontSize: 13, color: 'hsl(240 5% 55%)', marginTop: 4 }}>
-            Binance spot markets — prices refresh automatically every 2 minutes.
+            Live spot markets — prices refresh automatically every 20 seconds.
           </p>
         </div>
 

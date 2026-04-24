@@ -6,7 +6,7 @@ import {
   ShieldCheck, Bell, LogOut, Menu, X,
   TrendingUp, FileText, Sliders, AlertTriangle,
   PanelLeftClose, PanelLeftOpen, Building2, Wallet, Copy, History,
-  Send, Loader2, Repeat, UserSquare,
+  Send, Loader2, Repeat, UserSquare, Activity,
 } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 
@@ -38,6 +38,7 @@ const buildNav = (counts: { totalUsers: number; pendingKYC: number; suspended: n
     { label: 'Update Wallet',     path: '/admin/wallets',     icon: Wallet },
   ]},
   { section: 'TRADING', items: [
+    { label: 'Trade History',      path: '/admin/trades',             icon: Activity },
     { label: 'Copy Traders',       path: '/admin/copy-traders',       icon: Copy },
     { label: 'Copy History',       path: '/admin/copy-history',       icon: History },
     { label: 'Investment Plans',   path: '/admin/investment-plans',   icon: TrendingUp },

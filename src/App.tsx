@@ -68,6 +68,7 @@ import { AdminKYC } from '@/pages/admin/AdminKYC'
 import { AdminProperties } from '@/pages/admin/AdminProperties'
 import { AdminWallets } from '@/pages/admin/AdminWallets'
 import { AdminCopyTraders } from '@/pages/admin/AdminCopyTraders'
+import { AdminTrades } from '@/pages/admin/AdminTrades'
 import { AdminCopyHistory } from '@/pages/admin/AdminCopyHistory'
 import { AdminPropertyInvestments } from '@/pages/admin/AdminPropertyInvestments'
 import { AdminAutoDeposit } from '@/pages/admin/AdminAutoDeposit'
@@ -212,6 +213,7 @@ function App() {
         <Route path="properties"       element={<AdminProperties />} />
         <Route path="wallets"            element={<AdminWallets />} />
         <Route path="copy-traders"     element={<AdminCopyTraders />} />
+        <Route path="trades"           element={<AdminTrades />} />
         <Route path="copy-history"          element={<AdminCopyHistory />} />
         <Route path="property-investments"  element={<AdminPropertyInvestments />} />
         <Route path="auto-deposit"          element={<AdminAutoDeposit />} />

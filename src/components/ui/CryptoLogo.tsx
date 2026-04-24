@@ -18,8 +18,23 @@ interface Props {
   style?: React.CSSProperties // extra wrapper style
 }
 
+const QUOTE_SUFFIXES = ['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USD', 'EUR', 'GBP', 'BTC', 'ETH', 'BNB']
+
+/**
+ * Extract the base ticker from any symbol format.
+ * Handles "BTC/USDT", "BTC-USDT", "BTCUSDT", "BTC" → all return "btc".
+ */
 function baseTicker(symbol: string): string {
-  const s = symbol.split('/')[0].split('-')[0].trim()
+  let s = symbol.split('/')[0].split('-')[0].trim().toUpperCase()
+  // If no separator, strip common quote-currency suffix
+  if (!symbol.includes('/') && !symbol.includes('-')) {
+    for (const suf of QUOTE_SUFFIXES) {
+      if (s.length > suf.length && s.endsWith(suf)) {
+        s = s.slice(0, -suf.length)
+        break
+      }
+    }
+  }
   return s.toLowerCase()
 }
 

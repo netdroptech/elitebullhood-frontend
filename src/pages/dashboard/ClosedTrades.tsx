@@ -104,11 +104,15 @@ function TradeRow({ trade, isOpen }: { trade: Trade; isOpen: boolean }) {
 export function ClosedTrades() {
   const navigate = useNavigate()
   const { openList, closedList, clearAll } = useTrades()
+  const sortedOpen   = [...openList].sort((a, b) => a.expiresAt - b.expiresAt)
   const sortedClosed = [...closedList].sort((a, b) => b.expiresAt - a.expiresAt)
 
   const totalWon  = closedList.filter(t => t.status === 'won').length
   const totalLost = closedList.filter(t => t.status === 'lost').length
   const netPnl    = closedList.reduce((sum, t) => sum + (t.profit ?? 0), 0)
+
+  // Default to Open tab if any open trades exist, otherwise Closed.
+  const [tab, setTab] = useState<'open' | 'closed'>(openList.length > 0 ? 'open' : 'closed')
 
   return (
     <div style={{
@@ -140,29 +144,67 @@ export function ClosedTrades() {
           ))}
         </div>
 
-        {/* Open trades */}
-        {openList.length > 0 && (
-          <>
-            <h2 style={{ fontSize: 13, color: 'hsl(240 5% 55%)', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 10 }}>
-              OPEN TRADES
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-              {openList.map(t => <TradeRow key={t.id} trade={t} isOpen />)}
-            </div>
-          </>
-        )}
+        {/* ── Open / Closed tab toggle ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 14, gap: 12, flexWrap: 'wrap',
+        }}>
+          <div style={{
+            display: 'inline-flex', padding: 4, borderRadius: 12,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <button
+              onClick={() => setTab('open')}
+              style={{
+                padding: '9px 22px', borderRadius: 9, cursor: 'pointer', border: 'none',
+                background: tab === 'open' ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'transparent',
+                color: tab === 'open' ? '#fff' : 'hsl(240 5% 65%)',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+                display: 'flex', alignItems: 'center', gap: 7,
+              }}
+            >
+              OPEN
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 20, height: 18, padding: '0 6px', borderRadius: 9,
+                background: tab === 'open' ? 'rgba(255,255,255,0.2)' : 'rgba(167,139,250,0.15)',
+                color: tab === 'open' ? '#fff' : '#a78bfa',
+                fontSize: 10, fontWeight: 800,
+              }}>
+                {openList.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setTab('closed')}
+              style={{
+                padding: '9px 22px', borderRadius: 9, cursor: 'pointer', border: 'none',
+                background: tab === 'closed' ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'transparent',
+                color: tab === 'closed' ? '#fff' : 'hsl(240 5% 65%)',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+                display: 'flex', alignItems: 'center', gap: 7,
+              }}
+            >
+              CLOSED
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 20, height: 18, padding: '0 6px', borderRadius: 9,
+                background: tab === 'closed' ? 'rgba(255,255,255,0.2)' : 'rgba(167,139,250,0.15)',
+                color: tab === 'closed' ? '#fff' : '#a78bfa',
+                fontSize: 10, fontWeight: 800,
+              }}>
+                {sortedClosed.length}
+              </span>
+            </button>
+          </div>
 
-        {/* Closed trades */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <h2 style={{ fontSize: 13, color: 'hsl(240 5% 55%)', fontWeight: 700, letterSpacing: '0.08em' }}>
-            CLOSED TRADES
-          </h2>
-          {sortedClosed.length > 0 && (
+          {/* Clear history — only visible on Closed tab */}
+          {tab === 'closed' && sortedClosed.length > 0 && (
             <button
               onClick={() => { if (confirm('Clear all trade history?')) clearAll() }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                padding: '7px 12px', borderRadius: 8, cursor: 'pointer',
                 background: 'rgba(248,113,113,0.08)',
                 border: '1px solid rgba(248,113,113,0.2)',
                 color: '#f87171', fontSize: 11, fontWeight: 600,
@@ -173,19 +215,38 @@ export function ClosedTrades() {
             </button>
           )}
         </div>
-        {sortedClosed.length === 0 ? (
-          <div style={{
-            padding: '40px 20px', borderRadius: 12, textAlign: 'center',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px dashed rgba(255,255,255,0.08)',
-            color: 'hsl(240 5% 50%)', fontSize: 13,
-          }}>
-            You haven't closed any trades yet. Go place one!
-          </div>
+
+        {/* ── Trade list for current tab ── */}
+        {tab === 'open' ? (
+          sortedOpen.length === 0 ? (
+            <div style={{
+              padding: '50px 20px', borderRadius: 12, textAlign: 'center',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px dashed rgba(255,255,255,0.08)',
+              color: 'hsl(240 5% 50%)', fontSize: 13,
+            }}>
+              No open trades. Place one on the Trade page.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {sortedOpen.map(t => <TradeRow key={t.id} trade={t} isOpen />)}
+            </div>
+          )
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {sortedClosed.map(t => <TradeRow key={t.id} trade={t} isOpen={false} />)}
-          </div>
+          sortedClosed.length === 0 ? (
+            <div style={{
+              padding: '50px 20px', borderRadius: 12, textAlign: 'center',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px dashed rgba(255,255,255,0.08)',
+              color: 'hsl(240 5% 50%)', fontSize: 13,
+            }}>
+              You haven't closed any trades yet. Go place one!
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {sortedClosed.map(t => <TradeRow key={t.id} trade={t} isOpen={false} />)}
+            </div>
+          )
         )}
       </div>
 

@@ -196,14 +196,25 @@ export function TradeDetail() {
   const navigate = useNavigate()
   const sym = symbol.toUpperCase()
   const meta = PAIR_META[sym] ?? { pair: sym, name: sym, color: '#7c7c7c' }
-  const { user } = useAuth()
-  const { openList, balanceDelta, openTrade } = useTrades()
+  const { user, refreshUser } = useAuth()
+  const { openList, closedList, openTrade } = useTrades()
 
   // Filter open trades for THIS symbol (shown under the chart).
   const symOpenTrades = openList.filter(t => t.symbol === sym)
 
-  // Effective balance shown to the user = backend balance + running delta.
-  const effectiveBalance = (user?.balance ?? 0) + balanceDelta
+  // Balance now lives in the backend User row; it's updated server-side as
+  // trades open and resolve. Just read it.
+  const effectiveBalance = user?.balance ?? 0
+
+  // When a trade resolves (goes from open → won/lost), re-fetch the user so
+  // the header balance reflects the new amount immediately.
+  const prevClosedCount = useRef(closedList.length)
+  useEffect(() => {
+    if (closedList.length > prevClosedCount.current) {
+      refreshUser()
+    }
+    prevClosedCount.current = closedList.length
+  }, [closedList.length, refreshUser])
 
   const [ticker, setTicker]     = useState<TickerData | null>(null)
   const [tradeType, setTradeType] = useState<'CALL' | 'PUT'>('CALL')
@@ -247,7 +258,7 @@ export function TradeDetail() {
   // TradingView widget URL — depends on currently-selected chart mode
   const tvUrl = chartUrl(sym, chartMode)
 
-  function handlePlace() {
+  async function handlePlace() {
     const amt = parseFloat(amount)
     if (!amount || isNaN(amt) || amt <= 0) {
       setError('Please enter a valid amount.')
@@ -264,29 +275,33 @@ export function TradeDetail() {
     setError('')
     setPlacing(true)
 
-    // Small delay for UX, then actually open the trade
-    setTimeout(() => {
-      // Infer asset category & flag from our static maps / symbol shape
-      const category = inferCategory(sym)
-      const flag = FALLBACK_FLAGS[sym]
-      openTrade({
-        symbol:          sym,
-        pair:            meta.pair,
-        name:            meta.name,
-        category,
-        flagEmoji:       flag,
-        direction:       tradeType,
-        amount:          amt,
-        payoutMultiplier: 1.85,
-        openPrice:       price || 0,
-        durationLabel:   duration,
-        durationSec:     parseDurationSec(duration),
-      })
-      setPlacing(false)
-      setPlaced(true)
-      setAmount('')
-      setTimeout(() => setPlaced(false), 4000)
-    }, 900)
+    const category = inferCategory(sym)
+    const flag = FALLBACK_FLAGS[sym]
+    const result = await openTrade({
+      symbol:          sym,
+      pair:            meta.pair,
+      name:            meta.name,
+      category,
+      flagEmoji:       flag,
+      direction:       tradeType,
+      amount:          amt,
+      payoutMultiplier: 1.85,
+      openPrice:       price || 0,
+      durationLabel:   duration,
+      durationSec:     parseDurationSec(duration),
+    })
+
+    setPlacing(false)
+    if (!result.ok) {
+      setError(result.message ?? 'Failed to place trade.')
+      return
+    }
+
+    setPlaced(true)
+    setAmount('')
+    // Backend has just decremented the stake — refresh user to show new balance
+    refreshUser()
+    setTimeout(() => setPlaced(false), 4000)
   }
 
   // Infer asset category from symbol shape (keeps TradeDetail self-contained)

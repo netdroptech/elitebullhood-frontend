@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Wallet, TrendingUp, Download, ArrowUpRight, Gift,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useTrades } from '@/hooks/useTrades'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,16 @@ function StatCard({ label, value, sub, icon: Icon, loading }: {
 export function DashboardHome() {
   const navigate  = useNavigate()
   const { user, refreshUser } = useAuth()
+  const { closedList: tradeClosedList } = useTrades()
+
+  // When a trade resolves, refresh user so Dashboard balance updates.
+  const prevClosedCount = useRef(tradeClosedList.length)
+  useEffect(() => {
+    if (tradeClosedList.length > prevClosedCount.current) {
+      refreshUser()
+    }
+    prevClosedCount.current = tradeClosedList.length
+  }, [tradeClosedList.length, refreshUser])
 
   const [walletBannerDismissed, setWalletBannerDismissed] = useState(false)
 
@@ -227,6 +238,8 @@ export function DashboardHome() {
   }
 
   // ── Derived values ──────────────────────────────────────────────────────────
+  // Balance and totalProfit now reflect real DB values because the backend
+  // updates them when trades open and resolve.
   const balance  = stats?.balance          ?? 0
   const deposits = stats?.totalDeposits    ?? 0
   const withdrawals = stats?.totalWithdrawals ?? 0
