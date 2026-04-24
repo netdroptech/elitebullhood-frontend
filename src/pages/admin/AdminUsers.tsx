@@ -116,6 +116,13 @@ export function AdminUsers() {
 
   useEffect(() => { load() }, [load])
 
+  // Auto-refresh every 10 s so balances stay current as trades resolve on the
+  // server (open/win/loss all mutate users.balance in real time).
+  useEffect(() => {
+    const id = setInterval(() => load(), 10_000)
+    return () => clearInterval(id)
+  }, [load])
+
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(a => !a)
     else { setSortKey(key); setSortAsc(false) }
