@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Bot, TrendingUp, Activity, Play, Pause, Settings, BarChart2 } from 'lucide-react'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
 const BOTS = [
   {
@@ -168,6 +169,7 @@ export function AITradingBots() {
 
               {/* Pair tag */}
               <div className="flex items-center gap-2 mb-4">
+                {bot.pair !== 'Multi-asset' && <CryptoLogo symbol={bot.pair} size={20} />}
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.06)', color: 'hsl(40 6% 70%)' }}>{bot.pair}</span>
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', color: 'hsl(240 5% 55%)' }}>{bot.strategy}</span>
               </div>

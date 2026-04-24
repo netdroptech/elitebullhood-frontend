@@ -4,6 +4,7 @@ import {
   TrendingUp, TrendingDown, ArrowLeft, ChevronDown,
   Wallet, Clock, DollarSign, AlertCircle, CheckCircle2,
 } from 'lucide-react'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
 // ── Same metadata as TradingMarkets ───────────────────────────────────────
 const PAIR_META: Record<string, { pair: string; name: string; color: string }> = {
@@ -47,18 +48,7 @@ function fmtVolume(v: number) {
 }
 
 function CoinIcon({ symbol, color, size = 42 }: { symbol: string; color: string; size?: number }) {
-  const letter = symbol.replace('USDT', '').charAt(0)
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: `linear-gradient(135deg, ${color}66 0%, ${color}33 100%)`,
-      border: `2px solid ${color}55`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.34, fontWeight: 800, color,
-    }}>
-      {letter}
-    </div>
-  )
+  return <CryptoLogo symbol={symbol} size={size} fallbackColor={color} />
 }
 
 const DURATIONS = ['30 seconds', '1 minute', '2 minutes', '5 minutes', '10 minutes', '15 minutes', '30 minutes', '1 hour']

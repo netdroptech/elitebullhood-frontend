@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, TrendingDown, ChevronRight, RefreshCw, Search, Star, BarChart2, Wifi, WifiOff } from 'lucide-react'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
 // ── Static metadata (colors, names, pairs) ────────────────────────────────
 const PAIR_META: Record<string, { pair: string; name: string; color: string }> = {
@@ -90,18 +91,7 @@ function fmtCountdown(s: number) {
 
 // ── Sub-components ────────────────────────────────────────────────────────
 function CoinIcon({ symbol, color }: { symbol: string; color: string }) {
-  const letter = symbol.replace('USDT', '').charAt(0)
-  return (
-    <div style={{
-      width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-      background: `linear-gradient(135deg, ${color}55 0%, ${color}22 100%)`,
-      border: `1.5px solid ${color}44`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 13, fontWeight: 800, color,
-    }}>
-      {letter}
-    </div>
-  )
+  return <CryptoLogo symbol={symbol} size={38} fallbackColor={color} />
 }
 
 function Sparkline({ up }: { up: boolean }) {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Zap, Clock, Target, Shield, Bell, Lock } from 'lucide-react'
 import { usePlatformName } from '@/context/PlatformNameContext'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
 const SIGNALS = [
   {
@@ -159,11 +160,14 @@ export function PremiumSignals() {
                 </div>
 
                 {/* Pair + timeframe */}
-                <div style={{ minWidth: 110 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'hsl(40 6% 95%)', marginBottom: 2 }}>{sig.pair}</p>
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.06)', color: 'hsl(240 5% 60%)' }}>{sig.timeframe}</span>
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: statusBg, color: statusColor, fontWeight: 600 }}>{sig.status}</span>
+                <div style={{ minWidth: 130, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <CryptoLogo symbol={sig.pair} size={32} />
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: 'hsl(40 6% 95%)', marginBottom: 2 }}>{sig.pair}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.06)', color: 'hsl(240 5% 60%)' }}>{sig.timeframe}</span>
+                      <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: statusBg, color: statusColor, fontWeight: 600 }}>{sig.status}</span>
+                    </div>
                   </div>
                 </div>
 

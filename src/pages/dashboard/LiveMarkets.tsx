@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Search, Star } from 'lucide-react'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
 const MARKETS = [
   { name: 'Bitcoin',   symbol: 'BTC/USDT', price: 83552.00, change: +2.34, vol: '$28.4B', cap: '$1.64T',  data: [78000,79200,81000,80400,82100,83552], color: '#f59e0b', starred: true  },
@@ -120,9 +121,7 @@ export function LiveMarkets() {
                   <td style={{ padding: '0.75rem 0.5rem', color: 'hsl(240 5% 45%)', fontSize: 12 }}>{i + 1}</td>
                   <td style={{ padding: '0.75rem 1rem' }}>
                     <div className="flex items-center gap-2.5">
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${m.color}22`, border: `1px solid ${m.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: m.color, flexShrink: 0 }}>
-                        {m.symbol.slice(0, 3)}
-                      </div>
+                      <CryptoLogo symbol={m.symbol} size={30} fallbackColor={m.color} />
                       <div>
                         <p style={{ fontWeight: 600, color: 'hsl(40 6% 92%)', fontSize: 13 }}>{m.name}</p>
                         <p style={{ fontSize: 11, color: 'hsl(240 5% 50%)' }}>{m.symbol}</p>

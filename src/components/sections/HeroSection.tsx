@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Navbar } from '@/components/ui/Navbar'
+import { CryptoLogo } from '@/components/ui/CryptoLogo'
 import { cn } from '@/lib/utils'
 
 type Pair = {
@@ -115,7 +116,7 @@ function SocialProofBar() {
         <div className="flex animate-marquee whitespace-nowrap gap-3 group-hover:[animation-play-state:paused]">
           {doubled.map(({ label, price, change, up, color }, i) => (
             <div key={`${label}-${i}`} className="flex items-center gap-3 shrink-0 liquid-glass rounded-full px-4 py-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <CryptoLogo symbol={label} size={22} fallbackColor={color} />
               <span className="text-sm font-semibold text-foreground/80 tracking-wide">{label}</span>
               <span className="text-sm text-foreground/50 font-mono">${price}</span>
               <span
