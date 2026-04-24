@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, ArrowLeft, ChevronDown,
   Wallet, Clock, DollarSign, AlertCircle, CheckCircle2,
+  CandlestickChart, Briefcase, FileClock, Star,
 } from 'lucide-react'
 import { CryptoLogo } from '@/components/ui/CryptoLogo'
 
@@ -24,6 +25,100 @@ const PAIR_META: Record<string, { pair: string; name: string; color: string }> =
   ATOMUSDT:  { pair: 'ATOM/USDT',  name: 'Cosmos',        color: '#6f7390' },
   NEARUSDT:  { pair: 'NEAR/USDT',  name: 'NEAR Protocol', color: '#00ec97' },
   APTUSDT:   { pair: 'APT/USDT',   name: 'Aptos',         color: '#00bcd4' },
+  TRXUSDT:   { pair: 'TRX/USDT',   name: 'TRON',          color: '#ff060a' },
+  SHIBUSDT:  { pair: 'SHIB/USDT',  name: 'Shiba Inu',     color: '#ffa409' },
+  ARBUSDT:   { pair: 'ARB/USDT',   name: 'Arbitrum',      color: '#28a0f0' },
+  PEPEUSDT:  { pair: 'PEPE/USDT',  name: 'Pepe',          color: '#4caf50' },
+
+  // ── Forex ──
+  EURUSD:    { pair: 'EUR/USD',    name: 'Euro',                  color: '#1e3a8a' },
+  GBPUSD:    { pair: 'GBP/USD',    name: 'British Pound',         color: '#7c3aed' },
+  USDJPY:    { pair: 'USD/JPY',    name: 'Japanese Yen',          color: '#dc2626' },
+  AUDUSD:    { pair: 'AUD/USD',    name: 'Australian Dollar',     color: '#059669' },
+  USDCAD:    { pair: 'USD/CAD',    name: 'Canadian Dollar',       color: '#dc2626' },
+  USDCHF:    { pair: 'USD/CHF',    name: 'Swiss Franc',           color: '#e11d48' },
+  NZDUSD:    { pair: 'NZD/USD',    name: 'NZ Dollar',             color: '#0284c7' },
+  EURGBP:    { pair: 'EUR/GBP',    name: 'Euro / GBP',            color: '#1e3a8a' },
+  EURJPY:    { pair: 'EUR/JPY',    name: 'Euro / Yen',            color: '#1e3a8a' },
+  GBPJPY:    { pair: 'GBP/JPY',    name: 'GBP / Yen',             color: '#7c3aed' },
+  AUDJPY:    { pair: 'AUD/JPY',    name: 'AUD / Yen',             color: '#059669' },
+  AUDCAD:    { pair: 'AUD/CAD',    name: 'AUD / CAD',             color: '#059669' },
+  AUDCHF:    { pair: 'AUD/CHF',    name: 'AUD / CHF',             color: '#059669' },
+  AUDNZD:    { pair: 'AUD/NZD',    name: 'AUD / NZD',             color: '#059669' },
+
+  // ── Stocks ──
+  AAPL:      { pair: 'AAPL',       name: 'Apple',                 color: '#a3a3a3' },
+  MSFT:      { pair: 'MSFT',       name: 'Microsoft',             color: '#0078d4' },
+  GOOGL:     { pair: 'GOOGL',      name: 'Alphabet',              color: '#4285f4' },
+  AMZN:      { pair: 'AMZN',       name: 'Amazon',                color: '#ff9900' },
+  TSLA:      { pair: 'TSLA',       name: 'Tesla',                 color: '#cc0000' },
+  META:      { pair: 'META',       name: 'Meta',                  color: '#1877f2' },
+  NVDA:      { pair: 'NVDA',       name: 'NVIDIA',                color: '#76b900' },
+  NFLX:      { pair: 'NFLX',       name: 'Netflix',               color: '#e50914' },
+
+  // ── Commodities ──
+  XAUUSD:    { pair: 'XAU/USD',    name: 'Gold',                  color: '#fbbf24' },
+  XAGUSD:    { pair: 'XAG/USD',    name: 'Silver',                color: '#cbd5e1' },
+  WTIUSD:    { pair: 'WTI/USD',    name: 'WTI Crude Oil',         color: '#44403c' },
+  BRENT:     { pair: 'BRENT',      name: 'Brent Crude Oil',       color: '#292524' },
+  NATGAS:    { pair: 'NATGAS',     name: 'Natural Gas',           color: '#60a5fa' },
+}
+
+// Order for the pair dropdown — most-popular-first
+const PAIR_LIST: string[] = [
+  'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT',
+  'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT',
+  'LTCUSDT', 'MATICUSDT', 'NEARUSDT', 'APTUSDT', 'ATOMUSDT',
+  'UNIUSDT', 'TRXUSDT', 'SHIBUSDT', 'ARBUSDT', 'PEPEUSDT',
+]
+
+/**
+ * Map any of our internal codes to a TradingView-native symbol.
+ * TradingView uses exchange prefixes; picking the right one makes the chart
+ * actually show data. Falls back to Coinbase BTCUSD if nothing matches.
+ */
+function tvSymbol(code: string): string {
+  const c = code.toUpperCase()
+
+  // ── Crypto on Binance ─────────────────────────────────────────────
+  const binanceCrypto = new Set([
+    'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT', 'SOLUSDT',
+    'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'LINKUSDT', 'LTCUSDT',
+    'UNIUSDT', 'ATOMUSDT', 'NEARUSDT', 'APTUSDT', 'TRXUSDT', 'SHIBUSDT',
+    'ARBUSDT', 'PEPEUSDT',
+  ])
+  if (binanceCrypto.has(c)) return `BINANCE:${c}`
+
+  // ── Forex on OANDA ────────────────────────────────────────────────
+  const oandaForex = new Set([
+    'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD',
+    'EURGBP', 'EURJPY', 'GBPJPY', 'AUDJPY', 'AUDCAD', 'AUDCHF', 'AUDNZD',
+    'EURCHF', 'EURCAD', 'EURAUD', 'GBPCHF', 'GBPCAD', 'GBPAUD',
+  ])
+  if (oandaForex.has(c)) return `OANDA:${c}`
+
+  // ── Stocks on NASDAQ / NYSE ───────────────────────────────────────
+  const nasdaqStocks = new Set(['AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'ADBE', 'INTC', 'AMD'])
+  if (nasdaqStocks.has(c)) return `NASDAQ:${c}`
+  const nyseStocks = new Set(['JPM', 'BAC', 'V', 'MA', 'DIS', 'KO', 'PEP'])
+  if (nyseStocks.has(c)) return `NYSE:${c}`
+
+  // ── Commodities & indices ─────────────────────────────────────────
+  const tvcOverrides: Record<string, string> = {
+    XAUUSD: 'TVC:GOLD',
+    XAGUSD: 'TVC:SILVER',
+    WTIUSD: 'TVC:USOIL',
+    BRENT:  'TVC:UKOIL',
+    NATGAS: 'NYMEX:NG1!',
+    SPX:    'TVC:SPX',
+    NDX:    'TVC:NDX',
+    DJI:    'TVC:DJI',
+    US500:  'TVC:SPX',
+  }
+  if (tvcOverrides[c]) return tvcOverrides[c]
+
+  // ── Fallback: assume crypto-like and try Coinbase BTCUSD (never blank) ──
+  return 'COINBASE:BTCUSD'
 }
 
 interface TickerData {
@@ -54,6 +149,46 @@ function CoinIcon({ symbol, color, size = 42 }: { symbol: string; color: string;
 const DURATIONS = ['30 seconds', '1 minute', '2 minutes', '5 minutes', '10 minutes', '15 minutes', '30 minutes', '1 hour']
 const QUICK_AMOUNTS = [10, 25, 50, 100, 250, 500]
 
+// Chart view modes — drives which TradingView widget URL is rendered.
+type ChartMode = 'LIVE' | '7 DAY' | '30 DAY' | 'SIMPLE' | 'TECHNICAL'
+const CHART_MODES: ChartMode[] = ['LIVE', '7 DAY', '30 DAY', 'SIMPLE', 'TECHNICAL']
+
+function chartUrl(sym: string, mode: ChartMode): string {
+  const tvSym = tvSymbol(sym)
+  const encoded = encodeURIComponent(tvSym)
+  const common = 'theme=dark&locale=en&toolbar_bg=131722&withdateranges=0&hotlist=0&calendar=0&show_popup_button=0&no_referral_id=1&utm_medium=widget_new&utm_campaign=chart'
+
+  switch (mode) {
+    case 'LIVE':
+      // Area chart, 1-minute — streaming feel
+      return `https://s.tradingview.com/widgetembed/?symbol=${encoded}&interval=1&style=3&hide_side_toolbar=1&details=0&studies=[]&${common}`
+    case '7 DAY':
+      // Line chart, hourly candles, 7-day window
+      return `https://s.tradingview.com/widgetembed/?symbol=${encoded}&interval=60&style=2&range=7D&hide_side_toolbar=1&details=1&studies=[]&${common}`
+    case '30 DAY':
+      // Line chart, daily candles, 1-month window
+      return `https://s.tradingview.com/widgetembed/?symbol=${encoded}&interval=D&style=2&range=1M&hide_side_toolbar=1&details=1&studies=[]&${common}`
+    case 'SIMPLE':
+      // Mini symbol overview — clean area chart with current price, 24h, 1W, 1M, 3M ranges
+      return `https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en#${encodeURIComponent(JSON.stringify({
+        symbol: tvSym,
+        width: '100%',
+        height: '100%',
+        locale: 'en',
+        dateRange: '12M',
+        colorTheme: 'dark',
+        isTransparent: false,
+        autosize: true,
+        largeChartUrl: '',
+        chartOnly: false,
+      }))}`
+    case 'TECHNICAL':
+    default:
+      // Full advanced chart — candlesticks + side toolbar + indicators
+      return `https://s.tradingview.com/widgetembed/?symbol=${encoded}&interval=1&style=1&hide_side_toolbar=0&details=0&studies=[]&${common}`
+  }
+}
+
 export function TradeDetail() {
   const { symbol = 'BTCUSDT' } = useParams<{ symbol: string }>()
   const navigate = useNavigate()
@@ -67,10 +202,19 @@ export function TradeDetail() {
   const [placing, setPlacing]   = useState(false)
   const [placed, setPlaced]     = useState(false)
   const [error, setError]       = useState('')
+  const [chartMode, setChartMode] = useState<ChartMode>('TECHNICAL')
+  const [modeOpen, setModeOpen]   = useState(false)
+  const [pairOpen, setPairOpen]   = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // Fetch live ticker
+  // Fetch live ticker — only for Binance crypto pairs; TV chart carries the
+  // price for everything else, header stats just show "—".
   useEffect(() => {
+    const tv = tvSymbol(sym)
+    if (!tv.startsWith('BINANCE:')) {
+      setTicker(null)
+      return
+    }
     const load = async () => {
       try {
         const res  = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym}`)
@@ -90,9 +234,8 @@ export function TradeDetail() {
   const vol    = ticker ? parseFloat(ticker.quoteVolume): 0
   const up     = change >= 0
 
-  // TradingView widget URL
-  const tvSymbol = `BINANCE:${sym}`
-  const tvUrl = `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=131722&hide_side_toolbar=0&withdateranges=1&details=0&hotlist=0&calendar=0&studies=[]&show_popup_button=0&popup_width=1000&popup_height=650&no_referral_id=1&utm_medium=widget_new&utm_campaign=chart`
+  // TradingView widget URL — depends on currently-selected chart mode
+  const tvUrl = chartUrl(sym, chartMode)
 
   function handlePlace() {
     const amt = parseFloat(amount)
@@ -225,14 +368,126 @@ export function TradeDetail() {
           flex: 1, position: 'relative', minWidth: 0,
           borderRight: '1px solid rgba(255,255,255,0.07)',
           background: '#131722', minHeight: 480,
+          display: 'flex', flexDirection: 'column',
         }}>
-          <iframe
-            ref={iframeRef}
-            src={tvUrl}
-            title={`TradingView Chart — ${sym}`}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: '100%' }}
-            allowFullScreen
-          />
+          {/* Chart toolbar — chart mode (left) + currency pair (middle) */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px',
+            background: 'hsl(260 87% 4%)',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            flexShrink: 0,
+          }}>
+            {/* Chart Mode dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => { setModeOpen(v => !v); setPairOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 12px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'hsl(40 6% 90%)', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', letterSpacing: '0.04em', minWidth: 120, justifyContent: 'space-between',
+                }}
+              >
+                {chartMode}
+                <ChevronDown size={12} style={{ opacity: 0.6 }} />
+              </button>
+              {modeOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 50,
+                  background: 'hsl(260 60% 6%)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 10, padding: 4, minWidth: 140,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                }}>
+                  {CHART_MODES.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => { setChartMode(m); setModeOpen(false) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                        padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
+                        background: m === chartMode ? 'rgba(167,139,250,0.15)' : 'transparent',
+                        border: 'none', color: m === chartMode ? '#c4b5fd' : 'hsl(40 6% 85%)',
+                        fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', textAlign: 'left',
+                      }}
+                      onMouseEnter={e => { if (m !== chartMode) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                      onMouseLeave={e => { if (m !== chartMode) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      {m === chartMode && <CheckCircle2 size={12} style={{ color: '#a78bfa', flexShrink: 0 }} />}
+                      <span style={{ marginLeft: m === chartMode ? 0 : 20 }}>{m}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Currency Pair dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => { setPairOpen(v => !v); setModeOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 12px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'hsl(40 6% 90%)', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', letterSpacing: '0.02em',
+                }}
+              >
+                <CoinIcon symbol={sym} color={meta.color} size={22} />
+                {sym.replace('USDT', 'USD')}
+                <ChevronDown size={12} style={{ opacity: 0.6 }} />
+              </button>
+              {pairOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 50,
+                  background: 'hsl(260 60% 6%)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 10, padding: 4, minWidth: 200, maxHeight: 360, overflowY: 'auto',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                }}>
+                  {PAIR_LIST.map(ps => {
+                    const info = PAIR_META[ps]
+                    const active = ps === sym
+                    return (
+                      <button
+                        key={ps}
+                        onClick={() => { setPairOpen(false); navigate(`/dashboard/trade/${ps}`) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                          background: active ? 'rgba(167,139,250,0.15)' : 'transparent',
+                          border: 'none', color: active ? '#c4b5fd' : 'hsl(40 6% 85%)',
+                          fontSize: 12, fontWeight: 600, textAlign: 'left',
+                        }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <CoinIcon symbol={ps} color={info.color} size={20} />
+                        <span style={{ flex: 1 }}>{info.pair}</span>
+                        <span style={{ fontSize: 10, color: 'hsl(240 5% 50%)' }}>{info.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Iframe itself — keyed on mode+sym to force full reload on change */}
+          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+            <iframe
+              key={`${chartMode}-${sym}`}
+              ref={iframeRef}
+              src={tvUrl}
+              title={`TradingView Chart — ${sym}`}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block', position: 'absolute', inset: 0 }}
+              allowFullScreen
+            />
+          </div>
         </div>
 
         {/* ── Manual Trading Panel ── */}
@@ -489,6 +744,43 @@ export function TradeDetail() {
             This is a simulated trading interface.
           </p>
         </div>
+      </div>
+
+      {/* ── Bottom Navigation ── */}
+      <div style={{
+        display: 'flex', alignItems: 'stretch', justifyContent: 'space-around',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+        background: 'hsl(260 87% 4%)',
+        padding: '8px 4px 10px',
+        flexShrink: 0,
+      }}>
+        {[
+          { label: 'Assets',        icon: Briefcase,         path: '/dashboard/assets' },
+          { label: 'Trade',         icon: CandlestickChart,  path: '/dashboard/trade',       active: true },
+          { label: 'Closed Trades', icon: FileClock,         path: '/dashboard/statement' },
+          { label: 'Star',          icon: Star,              path: '/dashboard/markets?tab=Favourites' },
+        ].map(item => {
+          const Icon = item.icon
+          const active = !!item.active
+          return (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                padding: '6px 4px', borderRadius: 8, cursor: 'pointer',
+                background: 'transparent', border: 'none',
+                color: active ? '#c4b5fd' : 'hsl(240 5% 55%)',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'hsl(40 6% 85%)' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'hsl(240 5% 55%)' }}
+            >
+              <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+              <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.02em' }}>{item.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       <style>{`

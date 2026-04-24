@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Search, Star } from 'lucide-react'
 import { CryptoLogo } from '@/components/ui/CryptoLogo'
+import { useFavorites } from '@/hooks/useFavorites'
 
 const MARKETS = [
   { name: 'Bitcoin',   symbol: 'BTC/USDT', price: 83552.00, change: +2.34, vol: '$28.4B', cap: '$1.64T',  data: [78000,79200,81000,80400,82100,83552], color: '#f59e0b', starred: true  },
@@ -47,12 +49,20 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
 }
 
 export function LiveMarkets() {
-  const [tab, setTab] = useState('All')
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const initialTab = TABS.includes(searchParams.get('tab') ?? '') ? (searchParams.get('tab') as string) : 'All'
+  const [tab, setTab] = useState(initialTab)
   const [search, setSearch] = useState('')
-  const [starred, setStarred] = useState<string[]>(['BTC/USDT', 'ETH/USDT'])
+  const { toggle, isFavorite } = useFavorites()
+
+  function handleTrade(symbol: string) {
+    // Convert "BTC/USDT" → "BTCUSDT" for the TradeDetail route.
+    navigate(`/dashboard/trade/${symbol.replace('/', '')}`)
+  }
 
   const filtered = MARKETS.filter(m => {
-    if (tab === 'Favourites' && !starred.includes(m.symbol)) return false
+    if (tab === 'Favourites' && !isFavorite(m.symbol)) return false
     if (tab === 'Top Gainers' && m.change <= 0) return false
     if (tab === 'Top Losers'  && m.change >= 0) return false
     if (search && !m.name.toLowerCase().includes(search.toLowerCase()) && !m.symbol.toLowerCase().includes(search.toLowerCase())) return false
@@ -110,12 +120,13 @@ export function LiveMarkets() {
             <tbody>
               {filtered.map((m, i) => (
                 <tr key={m.symbol} style={{ borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: 'pointer' }}
+                  onClick={() => handleTrade(m.symbol)}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td style={{ padding: '0.75rem 0.5rem 0.75rem 1rem', width: 32 }}>
-                    <button onClick={() => setStarred(s => s.includes(m.symbol) ? s.filter(x => x !== m.symbol) : [...s, m.symbol])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: starred.includes(m.symbol) ? '#f59e0b' : 'hsl(240 5% 40%)', padding: 0 }}>
-                      <Star size={13} fill={starred.includes(m.symbol) ? '#f59e0b' : 'none'} />
+                    <button onClick={(e) => { e.stopPropagation(); toggle(m.symbol) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isFavorite(m.symbol) ? '#f59e0b' : 'hsl(240 5% 40%)', padding: 0 }}>
+                      <Star size={13} fill={isFavorite(m.symbol) ? '#f59e0b' : 'none'} />
                     </button>
                   </td>
                   <td style={{ padding: '0.75rem 0.5rem', color: 'hsl(240 5% 45%)', fontSize: 12 }}>{i + 1}</td>
@@ -143,7 +154,10 @@ export function LiveMarkets() {
                     <Sparkline data={m.data} color={m.change >= 0 ? '#a78bfa' : '#f87171'} />
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }}>
-                    <button style={{ padding: '0.3rem 0.75rem', borderRadius: '0.5rem', background: 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)', color: '#050505', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleTrade(m.symbol) }}
+                      style={{ padding: '0.3rem 0.75rem', borderRadius: '0.5rem', background: 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)', color: '#050505', fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
                       Trade
                     </button>
                   </td>

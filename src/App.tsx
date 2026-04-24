@@ -46,6 +46,10 @@ import { PropertyListing } from '@/pages/dashboard/PropertyListing'
 import { PropertyDetail } from '@/pages/dashboard/PropertyDetail'
 import { TradingMarkets } from '@/pages/dashboard/TradingMarkets'
 import { TradeDetail } from '@/pages/dashboard/TradeDetail'
+import { TradingAssets } from '@/pages/dashboard/TradingAssets'
+import { Holding } from '@/pages/dashboard/Holding'
+import { Mining } from '@/pages/dashboard/Mining'
+import { Staking } from '@/pages/dashboard/Staking'
 import { ProfileSettings } from '@/pages/dashboard/settings/ProfileSettings'
 import { ProfileUpdate } from '@/pages/dashboard/settings/ProfileUpdate'
 import { KYCVerification } from '@/pages/dashboard/settings/KYCVerification'
@@ -167,6 +171,10 @@ function App() {
         <Route path="statement"    element={<AccountStatement />} />
         <Route path="trade"        element={<TradingMarkets />} />
         <Route path="trade/:symbol" element={<TradeDetail />} />
+        <Route path="assets"       element={<TradingAssets />} />
+        <Route path="holding"      element={<Holding />} />
+        <Route path="mining"       element={<Mining />} />
+        <Route path="staking"      element={<Staking />} />
         <Route path="plans"        element={<InvestmentPlans />} />
         <Route path="portfolio"    element={<MyPortfolio />} />
         <Route path="performance"  element={<PerformanceHistory />} />
