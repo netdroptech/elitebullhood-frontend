@@ -12,7 +12,8 @@ export type TradeStatus = 'OPEN' | 'WON' | 'LOST' | 'open' | 'won' | 'lost'
 export type TradeDirection = 'CALL' | 'PUT'
 export type AssetCategory = 'crypto' | 'forex' | 'stock' | 'commodity'
 
-export interface Trade {
+/** Shape returned by the backend (/api/trades). */
+interface RawTrade {
   id:              string
   userId?:         string
   symbol:          string
@@ -33,20 +34,51 @@ export interface Trade {
   profit?:         number | null
 }
 
-interface NormalizedTrade extends Omit<Trade, 'status' | 'openTime' | 'expiresAt'> {
-  status:    'open' | 'won' | 'lost'
-  openTime:  number
-  expiresAt: number
+/** Canonical, normalised trade the rest of the app sees. Times are numbers
+ *  (unix ms) and status is lower-case. */
+export interface Trade {
+  id:              string
+  userId?:         string
+  symbol:          string
+  pair:            string
+  name:            string
+  category:        AssetCategory
+  flagEmoji?:      string
+  direction:       TradeDirection
+  amount:          number
+  payoutMultiplier: number
+  openTime:        number
+  expiresAt:       number
+  durationSec?:    number
+  durationLabel:   string
+  openPrice:       number
+  status:          'open' | 'won' | 'lost'
+  closePrice?:     number
+  profit?:         number
 }
 
-function normalizeTrade(t: Trade): NormalizedTrade {
+function normalizeTrade(t: RawTrade): Trade {
   const toMs = (v: number | string) => typeof v === 'string' ? new Date(v).getTime() : v
   const status = String(t.status).toLowerCase() as 'open' | 'won' | 'lost'
   return {
-    ...t,
+    id:              t.id,
+    userId:          t.userId,
+    symbol:          t.symbol,
+    pair:            t.pair,
+    name:            t.name,
+    category:        t.category,
+    flagEmoji:       t.flagEmoji ?? undefined,
+    direction:       t.direction,
+    amount:          t.amount,
+    payoutMultiplier: t.payoutMultiplier,
+    openTime:        toMs(t.openTime),
+    expiresAt:       toMs(t.expiresAt),
+    durationSec:     t.durationSec,
+    durationLabel:   t.durationLabel,
+    openPrice:       t.openPrice,
     status,
-    openTime:  toMs(t.openTime),
-    expiresAt: toMs(t.expiresAt),
+    closePrice:      t.closePrice ?? undefined,
+    profit:          t.profit ?? undefined,
   }
 }
 
@@ -65,7 +97,7 @@ export interface OpenTradePayload {
 }
 
 export function useTrades() {
-  const [trades,    setTrades]    = useState<NormalizedTrade[]>([])
+  const [trades,    setTrades]    = useState<Trade[]>([])
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState<string | null>(null)
   const mountedRef = useRef(true)
@@ -73,7 +105,7 @@ export function useTrades() {
   const refresh = useCallback(async () => {
     try {
       const res: any = await api.get('/trades?status=all&limit=200')
-      const list = (res?.data ?? []) as Trade[]
+      const list = (res?.data ?? []) as RawTrade[]
       if (!mountedRef.current) return
       setTrades(list.map(normalizeTrade))
       setError(null)
@@ -103,7 +135,7 @@ export function useTrades() {
     setError(null)
     try {
       const res: any = await api.post('/trades', input)
-      const created = res?.data as Trade
+      const created = res?.data as RawTrade
       if (created) {
         setTrades(prev => [normalizeTrade(created), ...prev])
       }

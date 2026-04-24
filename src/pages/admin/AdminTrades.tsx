@@ -68,11 +68,11 @@ export function AdminTrades() {
     if (showSpinner) setRefreshing(true)
     try {
       const [tradesRes, statsRes] = await Promise.all([
-        adminApi.get(`/trades?status=${tab}&limit=500`),
-        adminApi.get('/trades/stats'),
+        adminApi.get<{ success: boolean; data: AdminTrade[] }>(`/admin/trades?status=${tab}&limit=500`),
+        adminApi.get<{ success: boolean; data: Stats }>('/admin/trades/stats'),
       ])
-      setTrades((tradesRes.data?.data ?? []) as AdminTrade[])
-      setStats(statsRes.data?.data ?? null)
+      setTrades(tradesRes.data ?? [])
+      setStats(statsRes.data ?? null)
     } catch (err) {
       console.error('Failed to load admin trades:', err)
     } finally {
