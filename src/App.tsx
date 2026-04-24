@@ -50,6 +50,7 @@ import { TradingAssets } from '@/pages/dashboard/TradingAssets'
 import { Holding } from '@/pages/dashboard/Holding'
 import { Mining } from '@/pages/dashboard/Mining'
 import { Staking } from '@/pages/dashboard/Staking'
+import { ClosedTrades } from '@/pages/dashboard/ClosedTrades'
 import { ProfileSettings } from '@/pages/dashboard/settings/ProfileSettings'
 import { ProfileUpdate } from '@/pages/dashboard/settings/ProfileUpdate'
 import { KYCVerification } from '@/pages/dashboard/settings/KYCVerification'
@@ -175,6 +176,7 @@ function App() {
         <Route path="holding"      element={<Holding />} />
         <Route path="mining"       element={<Mining />} />
         <Route path="staking"      element={<Staking />} />
+        <Route path="closed-trades" element={<ClosedTrades />} />
         <Route path="plans"        element={<InvestmentPlans />} />
         <Route path="portfolio"    element={<MyPortfolio />} />
         <Route path="performance"  element={<PerformanceHistory />} />

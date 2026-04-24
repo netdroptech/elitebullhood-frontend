@@ -369,7 +369,7 @@ export function TradingAssets() {
           { label: 'Home',          icon: Home,             path: '/dashboard' },
           { label: 'Assets',        icon: Briefcase,        path: '/dashboard/assets',        active: true },
           { label: 'Trade',         icon: CandlestickChart, path: '/dashboard/trade' },
-          { label: 'Closed Trades', icon: FileClock,        path: '/dashboard/statement' },
+          { label: 'Closed Trades', icon: FileClock,        path: '/dashboard/closed-trades' },
           { label: 'Star',          icon: Star,             path: '/dashboard/markets?tab=Favourites' },
         ].map(item => {
           const Icon = item.icon

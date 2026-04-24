@@ -6,6 +6,8 @@ import {
   CandlestickChart, Briefcase, FileClock, Star,
 } from 'lucide-react'
 import { CryptoLogo } from '@/components/ui/CryptoLogo'
+import { useAuth } from '@/context/AuthContext'
+import { useTrades, parseDurationSec } from '@/hooks/useTrades'
 
 // ── Same metadata as TradingMarkets ───────────────────────────────────────
 const PAIR_META: Record<string, { pair: string; name: string; color: string }> = {
@@ -194,6 +196,14 @@ export function TradeDetail() {
   const navigate = useNavigate()
   const sym = symbol.toUpperCase()
   const meta = PAIR_META[sym] ?? { pair: sym, name: sym, color: '#7c7c7c' }
+  const { user } = useAuth()
+  const { openList, balanceDelta, openTrade } = useTrades()
+
+  // Filter open trades for THIS symbol (shown under the chart).
+  const symOpenTrades = openList.filter(t => t.symbol === sym)
+
+  // Effective balance shown to the user = backend balance + running delta.
+  const effectiveBalance = (user?.balance ?? 0) + balanceDelta
 
   const [ticker, setTicker]     = useState<TickerData | null>(null)
   const [tradeType, setTradeType] = useState<'CALL' | 'PUT'>('CALL')
@@ -247,13 +257,57 @@ export function TradeDetail() {
       setError('Minimum trade amount is $1.')
       return
     }
+    if (amt > effectiveBalance) {
+      setError('Insufficient funds. Please deposit or lower your stake.')
+      return
+    }
     setError('')
     setPlacing(true)
+
+    // Small delay for UX, then actually open the trade
     setTimeout(() => {
+      // Infer asset category & flag from our static maps / symbol shape
+      const category = inferCategory(sym)
+      const flag = FALLBACK_FLAGS[sym]
+      openTrade({
+        symbol:          sym,
+        pair:            meta.pair,
+        name:            meta.name,
+        category,
+        flagEmoji:       flag,
+        direction:       tradeType,
+        amount:          amt,
+        payoutMultiplier: 1.85,
+        openPrice:       price || 0,
+        durationLabel:   duration,
+        durationSec:     parseDurationSec(duration),
+      })
       setPlacing(false)
       setPlaced(true)
+      setAmount('')
       setTimeout(() => setPlaced(false), 4000)
-    }, 1800)
+    }, 900)
+  }
+
+  // Infer asset category from symbol shape (keeps TradeDetail self-contained)
+  function inferCategory(s: string): 'crypto' | 'forex' | 'stock' | 'commodity' {
+    const upper = s.toUpperCase()
+    if (upper.endsWith('USDT')) return 'crypto'
+    if (['XAUUSD', 'XAGUSD', 'WTIUSD', 'BRENT', 'NATGAS'].includes(upper)) return 'commodity'
+    if (['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'].includes(upper)) return 'stock'
+    if (upper.length === 6 && /^[A-Z]{6}$/.test(upper)) return 'forex'
+    return 'crypto'
+  }
+
+  // Emoji flags for non-crypto assets (used when opening a trade)
+  const FALLBACK_FLAGS: Record<string, string> = {
+    EURUSD: '🇪🇺', GBPUSD: '🇬🇧', USDJPY: '🇯🇵', AUDUSD: '🇦🇺',
+    USDCAD: '🇨🇦', USDCHF: '🇨🇭', NZDUSD: '🇳🇿', EURGBP: '🇪🇺',
+    EURJPY: '🇪🇺', GBPJPY: '🇬🇧', AUDJPY: '🇦🇺', AUDCAD: '🇦🇺',
+    AUDCHF: '🇦🇺', AUDNZD: '🇦🇺',
+    AAPL: '🇺🇸', MSFT: '🇺🇸', GOOGL: '🇺🇸', AMZN: '🇺🇸',
+    TSLA: '🇺🇸', META: '🇺🇸', NVDA: '🇺🇸', NFLX: '🇺🇸',
+    XAUUSD: '🥇', XAGUSD: '🥈', WTIUSD: '🛢️', BRENT: '🛢️', NATGAS: '⛽',
   }
 
   return (
@@ -574,22 +628,16 @@ export function TradeDetail() {
             }}>
               <Wallet size={12} /> Wallet
             </p>
-            <div style={{ position: 'relative' }}>
-              <select style={{
-                width: '100%', height: 44, paddingLeft: 14, paddingRight: 36, borderRadius: 10,
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                color: 'hsl(240 5% 55%)', fontSize: 13, cursor: 'pointer', outline: 'none',
-                appearance: 'none',
-              }}>
-                <option style={{ background: 'hsl(260 87% 6%)' }} value="">Select wallet…</option>
-                <option style={{ background: 'hsl(260 87% 6%)' }} value="main">Main Account — $0.00</option>
-                <option style={{ background: 'hsl(260 87% 6%)' }} value="demo">Demo Account — $10,000.00</option>
-              </select>
-              <ChevronDown size={14} style={{
-                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                color: 'hsl(240 5% 45%)', pointerEvents: 'none',
-              }} />
+            <div style={{
+              height: 44, paddingLeft: 14, paddingRight: 14, borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ fontSize: 13, color: 'hsl(240 5% 55%)' }}>Main Account</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'hsl(40 6% 92%)', fontFamily: 'ui-monospace, monospace' }}>
+                ${effectiveBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
 
@@ -743,6 +791,29 @@ export function TradeDetail() {
             Trading involves risk. Only invest what you can afford to lose.
             This is a simulated trading interface.
           </p>
+
+          {/* ── Open Trades on this symbol ── */}
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 11, color: 'hsl(240 5% 55%)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 10 }}>
+              OPEN TRADES ({symOpenTrades.length})
+            </p>
+            {symOpenTrades.length === 0 ? (
+              <div style={{
+                padding: '20px', borderRadius: 10, textAlign: 'center',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px dashed rgba(255,255,255,0.08)',
+                color: 'hsl(240 5% 45%)', fontSize: 11, letterSpacing: '0.05em',
+              }}>
+                NO OPEN TRADES
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {symOpenTrades.map(t => (
+                  <OpenTradeRow key={t.id} trade={t} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -757,7 +828,7 @@ export function TradeDetail() {
         {[
           { label: 'Assets',        icon: Briefcase,         path: '/dashboard/assets' },
           { label: 'Trade',         icon: CandlestickChart,  path: '/dashboard/trade',       active: true },
-          { label: 'Closed Trades', icon: FileClock,         path: '/dashboard/statement' },
+          { label: 'Closed Trades', icon: FileClock,         path: '/dashboard/closed-trades' },
           { label: 'Star',          icon: Star,              path: '/dashboard/markets?tab=Favourites' },
         ].map(item => {
           const Icon = item.icon
@@ -788,6 +859,52 @@ export function TradeDetail() {
         @keyframes fadeIn  { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:none } }
         @keyframes liveBlink { 0%,100%{opacity:1;box-shadow:0 0 6px #a78bfa} 50%{opacity:0.2;box-shadow:none} }
       `}</style>
+    </div>
+  )
+}
+
+// ─── Open Trade row — shows countdown + stake + direction ─────────────────
+function OpenTradeRow({ trade }: { trade: import('@/hooks/useTrades').Trade }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const remaining = Math.max(0, Math.floor((trade.expiresAt - now) / 1000))
+  const mins = Math.floor(remaining / 60).toString().padStart(2, '0')
+  const secs = (remaining % 60).toString().padStart(2, '0')
+  const isCall = trade.direction === 'CALL'
+  const color  = isCall ? '#a78bfa' : '#f87171'
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 12px', borderRadius: 10,
+      background: 'rgba(255,255,255,0.03)',
+      border: `1px solid ${color}33`,
+    }}>
+      <span style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+        width: 32, height: 32, borderRadius: 8,
+        background: `${color}1a`, color,
+      }}>
+        {isCall ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'hsl(40 6% 92%)' }}>
+          ${trade.amount.toFixed(2)} · {trade.direction}
+        </p>
+        <p style={{ fontSize: 10, color: 'hsl(240 5% 55%)' }}>
+          {trade.durationLabel}
+        </p>
+      </div>
+      <div style={{
+        fontSize: 14, fontWeight: 800, fontFamily: 'ui-monospace, monospace',
+        color: remaining < 5 ? '#f87171' : 'hsl(40 6% 90%)',
+        letterSpacing: '0.02em',
+      }}>
+        {mins}:{secs}
+      </div>
     </div>
   )
 }
