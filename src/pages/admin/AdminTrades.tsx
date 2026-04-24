@@ -3,7 +3,7 @@
  * Tabs: Open / Closed / All.  Filter by user.  Summary stats at the top.
  */
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { TrendingUp, TrendingDown, Search, RefreshCw, Loader2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Search, RefreshCw, Loader2, Edit3, X, Check } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 import { AssetLogo } from '@/components/ui/AssetLogo'
 
@@ -26,6 +26,8 @@ interface AdminTrade {
   status:           'OPEN' | 'WON' | 'LOST'
   closePrice?:      number | null
   profit?:          number | null
+  forcedOutcome?:   'WON' | 'LOST' | null
+  forcedProfit?:    number | null
   user: { id: string; firstName: string; lastName: string; email: string }
 }
 
@@ -63,6 +65,7 @@ export function AdminTrades() {
   const [stats,    setStats]    = useState<Stats | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [editing,  setEditing]  = useState<AdminTrade | null>(null)
 
   const load = useCallback(async (showSpinner = false) => {
     if (showSpinner) setRefreshing(true)
@@ -220,7 +223,7 @@ export function AdminTrades() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['Asset', 'User', 'Direction', 'Stake', 'Duration', 'Opened', 'Status', 'P/L'].map(h => (
+                {['Asset', 'User', 'Direction', 'Stake', 'Duration', 'Opened', 'Status', 'P/L', ''].map(h => (
                   <th key={h} style={{ padding: '11px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600, color: 'hsl(240 5% 55%)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                     {h}
                   </th>
@@ -293,7 +296,31 @@ export function AdminTrades() {
                       )}
                     </td>
                     <td style={{ padding: '10px 14px', fontFamily: 'ui-monospace, monospace', fontWeight: 800, color: pnlColor }}>
-                      {isOpen ? '—' : fmtUSD(t.profit ?? 0)}
+                      {isOpen
+                        ? (t.forcedOutcome
+                            ? <span style={{ fontSize: 11, color: t.forcedOutcome === 'WON' ? '#4ade80' : '#f87171' }}>
+                                SET: {t.forcedOutcome === 'WON' ? '+' : '-'}${Math.abs(t.forcedProfit ?? 0).toFixed(2)}
+                              </span>
+                            : '—')
+                        : fmtUSD(t.profit ?? 0)
+                      }
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                      {isOpen && (
+                        <button
+                          onClick={() => setEditing(t)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '6px 10px', borderRadius: 7, cursor: 'pointer',
+                            background: 'rgba(167,139,250,0.12)',
+                            border: '1px solid rgba(167,139,250,0.3)',
+                            color: '#a78bfa', fontSize: 11, fontWeight: 600,
+                          }}
+                        >
+                          <Edit3 size={11} />
+                          Modify
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )
@@ -303,9 +330,208 @@ export function AdminTrades() {
         </div>
       )}
 
+      {/* ── Edit modal ── */}
+      {editing && (
+        <EditTradeModal
+          trade={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(false) }}
+        />
+      )}
+
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
+    </div>
+  )
+}
+
+// ─── Modal: force-set the outcome of an open trade ────────────────────────
+function EditTradeModal({
+  trade, onClose, onSaved,
+}: {
+  trade: AdminTrade
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const defaultProfit = trade.forcedProfit != null
+    ? Math.abs(trade.forcedProfit)
+    : +(trade.amount * (trade.payoutMultiplier - 1)).toFixed(2)
+  const defaultLoss = trade.forcedProfit != null && trade.forcedProfit < 0
+    ? Math.abs(trade.forcedProfit)
+    : trade.amount
+
+  const [outcome, setOutcome] = useState<'WON' | 'LOST' | 'RANDOM'>(
+    trade.forcedOutcome ?? 'RANDOM',
+  )
+  const [amount,  setAmount]  = useState<string>(
+    trade.forcedOutcome === 'LOST' ? String(defaultLoss) : String(defaultProfit),
+  )
+  const [saving,  setSaving]  = useState(false)
+  const [err,     setErr]     = useState('')
+
+  async function save() {
+    setErr('')
+    setSaving(true)
+    try {
+      const body: any = { outcome: outcome === 'RANDOM' ? null : outcome }
+      if (outcome !== 'RANDOM') body.profit = Number(amount)
+      await adminApi.patch<{ success: boolean }>(`/admin/trades/${trade.id}`, body)
+      onSaved()
+    } catch (e: any) {
+      setErr(e?.message ?? 'Failed to save.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 460,
+          background: 'hsl(260 80% 6%)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 18, padding: 24,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: 'hsl(40 6% 98%)' }}>Modify Live Trade</h2>
+            <p style={{ fontSize: 11, color: 'hsl(240 5% 60%)', marginTop: 3 }}>
+              {trade.user.firstName} {trade.user.lastName} · {trade.pair} · {trade.direction} · ${trade.amount.toFixed(2)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8, padding: 6, cursor: 'pointer', color: 'hsl(240 5% 70%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Outcome selector */}
+        <p style={{ fontSize: 12, color: 'hsl(240 5% 60%)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 8 }}>
+          OUTCOME
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 18 }}>
+          {[
+            { value: 'WON',    label: 'WIN',    color: '#4ade80', bg: 'rgba(74,222,128,0.12)', border: 'rgba(74,222,128,0.35)' },
+            { value: 'LOST',   label: 'LOSS',   color: '#f87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.35)' },
+            { value: 'RANDOM', label: 'RANDOM', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.35)' },
+          ].map(opt => {
+            const active = outcome === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setOutcome(opt.value as any)}
+                style={{
+                  padding: '12px', borderRadius: 10, cursor: 'pointer',
+                  background: active ? opt.bg    : 'rgba(255,255,255,0.03)',
+                  border:     active ? `1.5px solid ${opt.border}` : '1px solid rgba(255,255,255,0.08)',
+                  color:      active ? opt.color : 'hsl(240 5% 60%)',
+                  fontSize: 12, fontWeight: 800, letterSpacing: '0.06em',
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Profit/Loss amount input — only when outcome is not RANDOM */}
+        {outcome !== 'RANDOM' && (
+          <>
+            <p style={{ fontSize: 12, color: 'hsl(240 5% 60%)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 8 }}>
+              {outcome === 'WON' ? 'PROFIT AMOUNT (USD)' : 'LOSS AMOUNT (USD)'}
+            </p>
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <span style={{
+                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                color: 'hsl(240 5% 50%)', fontSize: 15, fontWeight: 700, pointerEvents: 'none',
+              }}>
+                {outcome === 'WON' ? '+$' : '-$'}
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                style={{
+                  width: '100%', height: 48, paddingLeft: 40, paddingRight: 14,
+                  borderRadius: 10, fontSize: 16, fontWeight: 700,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'hsl(40 6% 92%)', outline: 'none',
+                }}
+              />
+            </div>
+            <p style={{ fontSize: 11, color: 'hsl(240 5% 55%)', marginBottom: 18, lineHeight: 1.5 }}>
+              {outcome === 'WON'
+                ? `User will receive back their $${trade.amount.toFixed(2)} stake PLUS $${amount || '0'} profit when the timer expires.`
+                : `User will lose $${amount || '0'} when the timer expires.`}
+            </p>
+          </>
+        )}
+
+        {outcome === 'RANDOM' && (
+          <p style={{ fontSize: 11, color: 'hsl(240 5% 55%)', marginBottom: 18, lineHeight: 1.5 }}>
+            No override — the system will decide the outcome randomly when the timer expires (~48 % win rate).
+          </p>
+        )}
+
+        {err && (
+          <p style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>{err}</p>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            style={{
+              flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'hsl(240 5% 70%)', fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            style={{
+              flex: 1, padding: '12px', borderRadius: 10,
+              cursor: saving ? 'default' : 'pointer',
+              background: saving ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+              color: '#fff', border: 'none',
+              fontSize: 13, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            {saving
+              ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} />
+              : <><Check size={14} /> Save Override</>}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
