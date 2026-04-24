@@ -134,15 +134,37 @@ export function useTrades() {
     setLoading(true)
     setError(null)
     try {
-      const res: any = await api.post('/trades', input)
-      const created = res?.data as RawTrade
+      // Direct fetch so we can surface the server's per-field validation errors
+      const token = localStorage.getItem('apex_token')
+      const base  = import.meta.env.VITE_API_URL ?? 'https://elitebullhood-backend.onrender.com/api'
+      const res = await fetch(`${base}/trades`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(input),
+      })
+      const body = await res.json().catch(() => ({}))
+
+      if (!res.ok || !body?.success) {
+        // Build a detailed message: "amount: must be > 0; openPrice: required"
+        let msg = body?.message ?? `Request failed (${res.status})`
+        if (Array.isArray(body?.errors) && body.errors.length) {
+          msg = body.errors.map((e: any) => `${e.field}: ${e.message}`).join('; ')
+        }
+        setError(msg)
+        return { ok: false as const, message: msg }
+      }
+
+      const created = body.data as RawTrade
       if (created) {
         setTrades(prev => [normalizeTrade(created), ...prev])
       }
       window.dispatchEvent(new Event('elite:trades:changed'))
       return { ok: true as const, trade: created }
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to place trade.'
+      const msg = err?.message ?? 'Failed to place trade.'
       setError(msg)
       return { ok: false as const, message: msg }
     } finally {
