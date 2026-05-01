@@ -39,7 +39,7 @@ export function ProfileSettings() {
     displayName: 'John Doe',
     username:    'John_doe',
     bio:         'Investor & trader. Building wealth one asset at a time.',
-    twitter:     '@edwintrader',
+    twitter:     'johntrader',
     linkedin:    'linkedin.com/in/john',
     website:     '',
   })
