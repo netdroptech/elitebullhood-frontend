@@ -36,11 +36,11 @@ export function ProfileSettings() {
   const navigate = useNavigate()
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState({
-    displayName: 'Edwin',
-    username:    'edwin_apex',
+    displayName: 'John Doe',
+    username:    'John_doe',
     bio:         'Investor & trader. Building wealth one asset at a time.',
     twitter:     '@edwintrader',
-    linkedin:    'linkedin.com/in/edwin',
+    linkedin:    'linkedin.com/in/john',
     website:     '',
   })
 
