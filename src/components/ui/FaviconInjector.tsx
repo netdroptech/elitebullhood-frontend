@@ -24,7 +24,7 @@ export function FaviconInjector() {
       link.type = mimeMatch ? mimeMatch[1] : 'image/png'
       link.href = faviconUrl
     } else {
-      // Restore default
+      // Restore default favicon (now actually ships in /public).
       link.type = 'image/x-icon'
       link.href = '/favicon.ico'
     }
