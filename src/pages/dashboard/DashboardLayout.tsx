@@ -547,20 +547,29 @@ export function DashboardLayout() {
 
             {/* ── Avatar + Account Dropdown ── */}
             <div ref={accountRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => { setAccountOpen(o => !o); setNotifOpen(false); setSettingsOpen(false) }}
-                style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700, color: '#050505', flexShrink: 0,
-                  border: accountOpen ? '2px solid rgba(167,139,250,0.6)' : '2px solid transparent',
-                  cursor: 'pointer', transition: 'border-color 0.15s',
-                  outline: 'none',
-                }}
-              >
-                E
-              </button>
+              {(() => {
+                const apiBase     = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'https://elitebullhood-backend.onrender.com'
+                const avatarSrc   = user?.avatarUrl ? `${apiBase}${user.avatarUrl}` : null
+                const initial     = (user?.firstName?.[0] ?? user?.email?.[0] ?? 'U').toUpperCase()
+                return (
+                  <button
+                    onClick={() => { setAccountOpen(o => !o); setNotifOpen(false); setSettingsOpen(false) }}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: avatarSrc ? '#000' : 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700, color: '#050505', flexShrink: 0,
+                      border: accountOpen ? '2px solid rgba(167,139,250,0.6)' : '2px solid transparent',
+                      cursor: 'pointer', transition: 'border-color 0.15s',
+                      outline: 'none', overflow: 'hidden', padding: 0,
+                    }}
+                  >
+                    {avatarSrc
+                      ? <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : initial}
+                  </button>
+                )
+              })()}
 
               {/* Dropdown */}
               {accountOpen && (

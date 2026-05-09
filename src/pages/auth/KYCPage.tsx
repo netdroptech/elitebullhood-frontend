@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ShieldCheck, Upload, X, Check, AlertCircle, Loader2,
@@ -23,10 +23,49 @@ const DOC_TYPES: { value: DocType; label: string; needsBack: boolean }[] = [
 // ─── Pending / Rejected screens ───────────────────────────────────────────────
 
 export function KYCPendingPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const navigate = useNavigate()
   const { logoUrl } = useLogo()
   const { platformName } = usePlatformName()
+
+  // ── Real-time approval detection ───────────────────────────────────────────
+  // Poll the user record every 10s while the customer is parked on this page.
+  // The moment the admin approves the KYC, `user.kycStatus` flips to APPROVED
+  // and the KYCRoute guard auto-redirects to /dashboard. We also flash a
+  // brief on-screen notice so the transition is obvious.
+  const [justVerified, setJustVerified] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    const tick = async () => {
+      try { await refreshUser() } catch { /* network blip — try again next tick */ }
+    }
+    const id = window.setInterval(() => { if (!cancelled) tick() }, 10_000)
+    return () => { cancelled = true; window.clearInterval(id) }
+  }, [refreshUser])
+
+  // When the user object reports APPROVED, show the success splash for ~1.5s
+  // before the route guard pushes them to the dashboard.
+  useEffect(() => {
+    if (user?.kycStatus === 'APPROVED') {
+      setJustVerified(true)
+      const t = window.setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
+      return () => window.clearTimeout(t)
+    }
+  }, [user?.kycStatus, navigate])
+
+  if (justVerified) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'hsl(260 87% 3%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Geist Sans','Inter',system-ui,sans-serif", textAlign: 'center' }}>
+        <div style={{ maxWidth: 420 }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(167,139,250,0.15)', border: '2px solid rgba(167,139,250,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' }}>
+            <Check size={40} style={{ color: '#a78bfa' }} strokeWidth={2.5} />
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'hsl(40 6% 96%)', margin: '0 0 10px' }}>You're verified!</h1>
+          <p style={{ fontSize: 14, color: 'hsl(240 5% 60%)' }}>Welcome aboard{user?.firstName ? `, ${user.firstName}` : ''} — taking you to your dashboard…</p>
+        </div>
+      </div>
+    )
+  }
 
   const steps = [
     { label: 'Account Created',     sub: 'Registration complete',           done: true,  active: false },
@@ -184,7 +223,6 @@ export default function KYCPage() {
 
   // Form state
   const [docType,     setDocType]     = useState<DocType>('PASSPORT')
-  const [docNumber,   setDocNumber]   = useState('')
   const [firstName,   setFirstName]   = useState(user?.firstName ?? '')
   const [lastName,    setLastName]    = useState(user?.lastName  ?? '')
 
@@ -205,7 +243,6 @@ export default function KYCPage() {
 
   async function handleSubmit() {
     setError('')
-    if (!docNumber.trim())   { setError('Document number is required.');   return }
     if (!firstName.trim())   { setError('First name is required.');        return }
     if (!lastName.trim())    { setError('Last name is required.');         return }
 
@@ -216,7 +253,9 @@ export default function KYCPage() {
     try {
       const form = new FormData()
       form.append('docType',     docType)
-      form.append('docNumber',   docNumber)
+      // Document number is no longer collected from the user. Send an empty
+      // placeholder so the backend's legacy NOT NULL column stays satisfied.
+      form.append('docNumber',   'N/A')
       form.append('firstName',   firstName)
       form.append('lastName',    lastName)
 
@@ -312,7 +351,6 @@ export default function KYCPage() {
                 </button>
               ))}
             </div>
-            <KYCField label="Document Number *" value={docNumber} onChange={setDocNumber} placeholder="e.g. P12345678" />
           </Section>
 
           {/* ── Document Photos ── */}

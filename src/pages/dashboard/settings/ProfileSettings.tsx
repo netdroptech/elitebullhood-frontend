@@ -1,6 +1,11 @@
-import { useState } from 'react'
-import { Camera, User, AtSign, FileText, Twitter, Linkedin, Globe, Save, ArrowLeft } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Camera, User, AtSign, FileText, Twitter, Linkedin, Globe, Save, ArrowLeft, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
+
+// Resolve absolute URL for avatar paths returned by the API (e.g. "/uploads/avatars/foo.png")
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'https://elitebullhood-backend.onrender.com'
 
 function SettingsCard({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -34,7 +39,60 @@ const inputStyle: React.CSSProperties = {
 
 export function ProfileSettings() {
   const navigate = useNavigate()
+  const { user, refreshUser } = useAuth()
   const [saved, setSaved] = useState(false)
+
+  // ── Avatar upload state ─────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarError,     setAvatarError]     = useState<string | null>(null)
+
+  const initial = (user?.firstName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()
+  const avatarSrc = user?.avatarUrl ? `${API_BASE}${user.avatarUrl}` : null
+
+  async function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    // Reset the input value right away so picking the same file twice still re-fires onChange.
+    e.target.value = ''
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError('Image must be 2MB or smaller.')
+      return
+    }
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.type)) {
+      setAvatarError('Please choose a JPG, PNG or WebP image.')
+      return
+    }
+
+    setAvatarError(null)
+    setUploadingAvatar(true)
+    try {
+      const form = new FormData()
+      form.append('avatar', file)
+      await api.upload<{ success: boolean; data: { avatarUrl: string } }>('/user/avatar', form)
+      // Refresh the global auth user so EVERY component (topbar, dropdowns, etc.) re-renders with the new image.
+      await refreshUser()
+    } catch (err: any) {
+      setAvatarError(err?.message ?? 'Upload failed. Please try again.')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarError(null)
+    setUploadingAvatar(true)
+    try {
+      await api.delete('/user/avatar')
+      await refreshUser()
+    } catch (err: any) {
+      setAvatarError(err?.message ?? 'Could not remove photo.')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
   const [form, setForm] = useState({
     displayName: 'John Doe',
     username:    'John_doe',
@@ -79,27 +137,73 @@ export function ProfileSettings() {
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div style={{
               width: 80, height: 80, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)',
+              background: avatarSrc ? '#000' : 'linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 28, fontWeight: 800, color: '#050505',
-            }}>E</div>
-            <button style={{
-              position: 'absolute', bottom: 0, right: 0,
-              width: 26, height: 26, borderRadius: '50%',
-              background: 'hsl(260 87% 8%)', border: '2px solid hsl(260 87% 5%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
+              overflow: 'hidden',
             }}>
-              <Camera size={12} style={{ color: '#c4b5fd' }} />
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt="Profile"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                />
+              ) : (
+                initial
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: 26, height: 26, borderRadius: '50%',
+                background: 'hsl(260 87% 8%)', border: '2px solid hsl(260 87% 5%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: uploadingAvatar ? 'wait' : 'pointer',
+              }}
+            >
+              {uploadingAvatar
+                ? <Loader2 size={12} style={{ color: '#c4b5fd', animation: 'spin 1s linear infinite' }} />
+                : <Camera size={12} style={{ color: '#c4b5fd' }} />}
             </button>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
           <div>
             <p style={{ fontSize: 13, color: 'hsl(40 6% 85%)', marginBottom: 6 }}>Upload a new avatar</p>
-            <p style={{ fontSize: 11, color: 'hsl(240 5% 48%)', marginBottom: 12 }}>JPG, PNG or GIF. Max size 2MB.</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button style={{ fontSize: 12, fontWeight: 600, padding: '7px 16px', borderRadius: 8, background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.3)', color: '#c4b5fd', cursor: 'pointer' }}>Upload Photo</button>
-              <button style={{ fontSize: 12, fontWeight: 500, padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'hsl(240 5% 55%)', cursor: 'pointer' }}>Remove</button>
+            <p style={{ fontSize: 11, color: 'hsl(240 5% 48%)', marginBottom: 12 }}>JPG, PNG or WebP. Max size 2MB.</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                style={{ fontSize: 12, fontWeight: 600, padding: '7px 16px', borderRadius: 8, background: 'rgba(167,139,250,0.2)', border: '1px solid rgba(167,139,250,0.3)', color: '#c4b5fd', cursor: uploadingAvatar ? 'wait' : 'pointer' }}
+              >
+                {uploadingAvatar ? 'Uploading…' : 'Upload Photo'}
+              </button>
+              {avatarSrc && (
+                <button
+                  type="button"
+                  onClick={handleAvatarRemove}
+                  disabled={uploadingAvatar}
+                  style={{ fontSize: 12, fontWeight: 500, padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'hsl(240 5% 55%)', cursor: uploadingAvatar ? 'wait' : 'pointer' }}
+                >
+                  Remove
+                </button>
+              )}
             </div>
+            {avatarError && (
+              <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{avatarError}</p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={handleAvatarPick}
+            />
           </div>
         </div>
       </SettingsCard>

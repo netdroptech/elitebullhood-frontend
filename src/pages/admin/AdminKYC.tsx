@@ -65,7 +65,10 @@ export function AdminKYC() {
     setLoading(true)
     setError('')
     try {
-      const params = tab === 'PENDING' ? '?status=PENDING' : ''
+      // Backend defaults to status=PENDING when no status param is sent,
+      // so we must explicitly request "ALL" to also include APPROVED / REJECTED records
+      // (otherwise approved KYC documents — and their uploaded images — vanish from view).
+      const params = tab === 'PENDING' ? '?status=PENDING&limit=100' : '?status=ALL&limit=100'
       const res = await adminApi.get<{ success: boolean; data: KYCRecord[] }>(`/kyc/admin/list${params}`)
       setRecords(res.data)
     } catch (err: any) {
@@ -84,8 +87,10 @@ export function AdminKYC() {
     setActionMsg(null)
     try {
       await adminApi.post(`/kyc/admin/${id}/approve`, {})
-      setActionMsg({ type: 'success', text: 'KYC approved successfully.' })
-      setSelected(null)
+      setActionMsg({ type: 'success', text: 'KYC approved successfully. Documents remain viewable below.' })
+      // Switch to the ALL tab so the now-approved record (and its document images) stays visible.
+      setTab('ALL')
+      // Keep the user selected so the admin can still review the documents post-approval.
       load()
     } catch (err: any) {
       setActionMsg({ type: 'error', text: err.message ?? 'Approval failed.' })
@@ -102,7 +107,8 @@ export function AdminKYC() {
       await adminApi.post(`/kyc/admin/${id}/reject`, { reason: rejectNote })
       setActionMsg({ type: 'success', text: 'KYC rejected.' })
       setRejectNote('')
-      setSelected(null)
+      // Keep the record selected and visible (uploaded images remain accessible after rejection too).
+      setTab('ALL')
       load()
     } catch (err: any) {
       setActionMsg({ type: 'error', text: err.message ?? 'Rejection failed.' })

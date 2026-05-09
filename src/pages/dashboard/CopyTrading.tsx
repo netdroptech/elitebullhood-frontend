@@ -101,7 +101,8 @@ function fmtMoney(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'http://localhost:4000'
+// Mirror the api.ts default so trader photos still resolve when VITE_API_URL is missing.
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'https://elitebullhood-backend.onrender.com'
 function imgSrc(url: string | null) {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -113,9 +114,11 @@ function TraderAvatar({ name, imageUrl, size = 48 }: { name: string; imageUrl: s
   const [err, setErr] = useState(false)
   const src = imgSrc(imageUrl)
   const color = avatarColor(name)
+  // Reset the error state whenever the URL changes so re-uploads recover from a previous failure.
+  useEffect(() => { setErr(false) }, [src])
   if (src && !err) {
     return (
-      <img src={src} alt={name} onError={() => setErr(true)}
+      <img key={src} src={src} alt={name} onError={() => setErr(true)}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover',
           flexShrink: 0, border: `2px solid ${color}55`, boxShadow: `0 0 0 3px ${color}18` }} />
     )

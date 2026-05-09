@@ -52,7 +52,10 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]
 }
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'http://localhost:4000'
+// Keep this fallback in lockstep with the default in src/lib/api.ts so image
+// URLs work even when VITE_API_URL is unset (otherwise images 404 against localhost
+// while the API itself talks to production).
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') ?? 'https://elitebullhood-backend.onrender.com'
 function imgSrc(url: string | null | undefined) {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -77,9 +80,15 @@ function TraderAvatar({ trader, size = 44 }: { trader: CopyTrader; size?: number
   const src = imgSrc(trader.imageUrl)
   const color = avatarColor(trader.name)
 
+  // Reset the error flag any time the image URL changes (e.g. admin re-uploads).
+  // Without this, a single previous failure would permanently lock the avatar
+  // to the initials fallback even after a successful upload.
+  useEffect(() => { setImgErr(false) }, [src])
+
   if (src && !imgErr) {
     return (
       <img
+        key={src}
         src={src}
         alt={trader.name}
         onError={() => setImgErr(true)}
