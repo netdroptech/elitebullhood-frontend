@@ -255,7 +255,12 @@ export function AdminKYC() {
                   {[
                     { label: 'Front of ID', url: selectedRecord.frontUrl },
                     ...(selectedRecord.backUrl ? [{ label: 'Back of ID', url: selectedRecord.backUrl }] : []),
-                    { label: 'Selfie', url: selectedRecord.selfieUrl },
+                    // New submissions don't collect a selfie — the backend now stores
+                    // backUrl as selfieUrl. Only show the Selfie tile for legacy
+                    // records where selfieUrl is genuinely a separate image.
+                    ...(selectedRecord.selfieUrl && selectedRecord.selfieUrl !== selectedRecord.backUrl
+                      ? [{ label: 'Selfie', url: selectedRecord.selfieUrl }]
+                      : []),
                   ].map(doc => (
                     <div key={doc.label} style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>

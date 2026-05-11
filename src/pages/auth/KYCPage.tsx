@@ -228,41 +228,38 @@ export default function KYCPage() {
 
   const [address,     setAddress]     = useState('')
 
-  // Files
+  // Files — customer uploads front + back of their ID. Selfie has been dropped.
   const [frontFile,  setFrontFile]  = useState<File | null>(null)
   const [backFile,   setBackFile]   = useState<File | null>(null)
-  const [selfieFile, setSelfieFile] = useState<File | null>(null)
 
   const frontRef  = useRef<HTMLInputElement>(null)
   const backRef   = useRef<HTMLInputElement>(null)
-  const selfieRef = useRef<HTMLInputElement>(null)
-
-  const docMeta = DOC_TYPES.find(d => d.value === docType)!
 
   function previewUrl(f: File | null) { return f ? URL.createObjectURL(f) : null }
 
   async function handleSubmit() {
     setError('')
-    if (!firstName.trim())   { setError('First name is required.');        return }
-    if (!lastName.trim())    { setError('Last name is required.');         return }
+    if (!firstName.trim()) { setError('First name is required.');          return }
+    if (!lastName.trim())  { setError('Last name is required.');           return }
 
-    if (!frontFile)          { setError('Front document photo is required.'); return }
-    if (!selfieFile)         { setError('Selfie with document is required.'); return }
+    if (!frontFile)        { setError('Front of ID photo is required.');   return }
+    if (!backFile)         { setError('Back of ID photo is required.');    return }
 
     setLoading(true)
     try {
       const form = new FormData()
       form.append('docType',     docType)
-      // Document number is no longer collected from the user. Send an empty
-      // placeholder so the backend's legacy NOT NULL column stays satisfied.
+      // Document number is no longer collected from the user. Send a placeholder
+      // so the backend's legacy NOT NULL column stays satisfied.
       form.append('docNumber',   'N/A')
       form.append('firstName',   firstName)
       form.append('lastName',    lastName)
 
       form.append('address',     address)
       form.append('front',       frontFile)
-      if (backFile) form.append('back', backFile)
-      form.append('selfie', selfieFile)
+      form.append('back',        backFile)
+      // Selfie is no longer collected. Backend now derives selfieUrl from backUrl
+      // when the field is absent, so we intentionally don't append a 'selfie' file here.
 
       await api.upload('/kyc/submit', form)
       await refreshUser()
@@ -353,44 +350,34 @@ export default function KYCPage() {
             </div>
           </Section>
 
-          {/* ── Document Photos ── */}
-          <Section title="Upload Photos" icon={<Upload size={16}/>}>
+          {/* ── Front of ID ── */}
+          <Section title="Front of ID" icon={<Upload size={16}/>}>
             <p className="text-xs mb-4" style={{ color: 'hsl(240 5% 55%)' }}>
-              Ensure photos are clear, well-lit, and all text is readable. Max 10MB per file.
+              Upload a clear, well-lit photo of the front side of your ID. All text must be readable. Max 10MB.
             </p>
-            <div className={`grid gap-4 ${docMeta.needsBack ? 'grid-cols-2' : 'grid-cols-1 max-w-xs'}`}>
+            <div className="max-w-xs">
               <UploadBox
-                label={docMeta.needsBack ? 'Front Side *' : 'Document Photo *'}
+                label="Front of ID *"
                 file={frontFile}
                 preview={previewUrl(frontFile)}
                 inputRef={frontRef}
                 onChange={f => { setFrontFile(f); setError('') }}
               />
-              {docMeta.needsBack && (
-                <UploadBox
-                  label="Back Side *"
-                  file={backFile}
-                  preview={previewUrl(backFile)}
-                  inputRef={backRef}
-                  onChange={f => { setBackFile(f); setError('') }}
-                />
-              )}
             </div>
           </Section>
 
-          {/* ── Selfie ── */}
-          <Section title="Selfie with Document" icon={<Camera size={16}/>}>
+          {/* ── Back of ID ── */}
+          <Section title="Back of ID" icon={<Camera size={16}/>}>
             <p className="text-xs mb-4" style={{ color: 'hsl(240 5% 55%)' }}>
-              Hold your document next to your face. Make sure both your face and document are clearly visible.
+              Upload a clear, well-lit photo of the back side of your ID. Make sure all text and any barcode are visible. Max 10MB.
             </p>
             <div className="max-w-xs">
               <UploadBox
-                label="Selfie with Document *"
-                file={selfieFile}
-                preview={previewUrl(selfieFile)}
-                inputRef={selfieRef}
-                onChange={f => { setSelfieFile(f); setError('') }}
-                tall
+                label="Back of ID *"
+                file={backFile}
+                preview={previewUrl(backFile)}
+                inputRef={backRef}
+                onChange={f => { setBackFile(f); setError('') }}
               />
             </div>
           </Section>
