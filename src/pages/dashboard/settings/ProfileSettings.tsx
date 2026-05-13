@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Camera, User, AtSign, FileText, Twitter, Linkedin, Globe, Save, ArrowLeft, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
@@ -93,21 +93,56 @@ export function ProfileSettings() {
     }
   }
 
-  const [form, setForm] = useState({
-    displayName: 'John Doe',
-    username:    'John_doe',
-    bio:         'Investor & trader. Building wealth one asset at a time.',
-    twitter:     'johntrader',
-    linkedin:    'linkedin.com/in/john',
-    website:     '',
+  // Profile form — loads the real values from the AuthContext user, and saves
+  // them via PATCH /api/user/me on submit. Falls back to sensible defaults
+  // (e.g. firstName + lastName) when the user hasn't filled the field yet.
+  const buildInitial = () => ({
+    displayName: user?.displayName ?? [user?.firstName, user?.lastName].filter(Boolean).join(' ') ?? '',
+    username:    user?.username    ?? '',
+    bio:         user?.bio         ?? '',
+    twitter:     user?.twitter     ?? '',
+    linkedin:    user?.linkedin    ?? '',
+    website:     user?.website     ?? '',
   })
+  const [form, setForm] = useState(buildInitial)
+  const [saving, setSaving]     = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Keep the form in sync when the auth user refreshes (e.g. after a save or
+  // an avatar upload).
+  useEffect(() => { setForm(buildInitial()) }, [user?.id])
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  async function handleSave() {
+    setSaveError(null)
+    setSaving(true)
+    try {
+      // Split "First Last" → firstName / lastName so the rest of the platform
+      // (topbar greeting, KYC pre-fill, admin user list, etc.) shows the new name too.
+      const dn = form.displayName.trim()
+      const [firstName, ...rest] = dn.split(/\s+/)
+      const lastName = rest.join(' ')
+
+      await api.patch('/user/me', {
+        displayName: form.displayName,
+        username:    form.username,
+        bio:         form.bio,
+        twitter:     form.twitter,
+        linkedin:    form.linkedin,
+        website:     form.website,
+        firstName:   firstName || user?.firstName || '',
+        lastName:    lastName  || user?.lastName  || '',
+      })
+      await refreshUser()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      setSaveError(err?.message ?? 'Could not save your changes.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const THEMES = [
@@ -276,11 +311,20 @@ export function ProfileSettings() {
         </div>
       </SettingsCard>
 
+      {/* Save error */}
+      {saveError && (
+        <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.22)', color: '#f87171', fontSize: 12 }}>
+          {saveError}
+        </div>
+      )}
+
       {/* Save */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-        <button onClick={() => navigate(-1)} style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'hsl(240 5% 55%)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 22px', borderRadius: 10, background: saved ? 'rgba(167,139,250,0.15)' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', border: saved ? '1px solid rgba(167,139,250,0.3)' : 'none', color: saved ? '#a78bfa' : '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-          <Save size={14} /> {saved ? 'Saved!' : 'Save Changes'}
+        <button onClick={() => navigate(-1)} disabled={saving} style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'hsl(240 5% 55%)', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>Cancel</button>
+        <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 22px', borderRadius: 10, background: saved ? 'rgba(167,139,250,0.15)' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', border: saved ? '1px solid rgba(167,139,250,0.3)' : 'none', color: saved ? '#a78bfa' : '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s', opacity: saving ? 0.7 : 1 }}>
+          {saving
+            ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Saving…</>
+            : <><Save size={14} /> {saved ? 'Saved!' : 'Save Changes'}</>}
         </button>
       </div>
     </div>

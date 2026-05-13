@@ -11,6 +11,13 @@ export interface AuthUser {
   phone?:      string
   country?:    string
   avatarUrl?:  string
+  // Public profile (set via /dashboard/settings/profile)
+  displayName?: string
+  username?:    string
+  bio?:         string
+  twitter?:     string
+  linkedin?:    string
+  website?:     string
   status:      string
   kycStatus:   string
   plan:        string
