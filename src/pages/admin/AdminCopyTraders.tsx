@@ -23,6 +23,7 @@ interface CopyTrader {
   isActive:      boolean
   isVerified:    boolean
   sortOrder:     number
+  feeLabel:      string
   createdAt:     string
 }
 
@@ -68,6 +69,7 @@ const BLANK = {
   winRate: '', monthlyReturn: '', totalReturn: '', followers: '',
   minAmount: '100', riskLevel: 'Medium', tags: '',
   isActive: true, isVerified: false, sortOrder: '0',
+  feeLabel: '0% fees',
 }
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
@@ -145,6 +147,7 @@ export function AdminCopyTraders() {
       followers: String(t.followers), minAmount: String(t.minAmount),
       riskLevel: t.riskLevel, tags: (Array.isArray(t.tags) ? t.tags : []).join(', '),
       isActive: t.isActive, isVerified: t.isVerified, sortOrder: String(t.sortOrder),
+      feeLabel: t.feeLabel ?? '0% fees',
     })
     setPhotoFile(null); setPhotoPreview(null)
     setFormError(null); setEditTarget(t); setModalMode('edit')
@@ -179,6 +182,7 @@ export function AdminCopyTraders() {
     fd.append('isActive',      String(form.isActive))
     fd.append('isVerified',    String(form.isVerified))
     fd.append('sortOrder',     form.sortOrder)
+    fd.append('feeLabel',      form.feeLabel)
     if (photoFile) fd.append('traderPhoto', photoFile)
     return fd
   }
@@ -459,6 +463,9 @@ export function AdminCopyTraders() {
 
               {/* Tags */}
               <FormField label="Tags (comma-separated)" placeholder="BTC, ETH, Swing" {...F('tags')} />
+
+              {/* Fees label (shown on the trader card on the user side) */}
+              <FormField label="Fees Label (shown to users)" placeholder="e.g. 0% fees, 1.5% fees, Performance fee 20%" {...F('feeLabel')} />
 
               {/* Description */}
               <div>

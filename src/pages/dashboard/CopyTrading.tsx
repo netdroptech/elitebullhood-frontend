@@ -27,6 +27,7 @@ interface CopyTrader {
   isActive:      boolean
   isVerified:    boolean
   sortOrder:     number
+  feeLabel?:     string
 }
 
 interface ActiveCopy {
@@ -216,12 +217,12 @@ function StartCopyModal({ trader, balance, onClose, onConfirm, submitting }: Sta
             <p style={{ fontWeight: 700, color: 'hsl(40 6% 93%)', fontSize: 15 }}>{trader.name}</p>
             <p style={{ fontSize: 12, color: 'hsl(240 5% 50%)', marginTop: 2 }}>{trader.strategy}</p>
           </div>
-          {/* 0% fees badge */}
+          {/* Fees badge — admin-editable label */}
           <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 10px',
             borderRadius: 999, background: 'rgba(167,139,250,0.12)', color: '#c4b5fd',
             border: '1px solid rgba(167,139,250,0.2)' }}>
             <Zap size={9} style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
-            0% fees
+            {trader.feeLabel ?? '0% fees'}
           </span>
         </div>
 
@@ -833,7 +834,7 @@ export function CopyTrading() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'hsl(240 5% 50%)', marginBottom: '0.875rem', marginTop: 'auto' }}>
                       <span>Min copy: <span style={{ color: 'hsl(40 6% 80%)' }}>${tr.minAmount.toLocaleString()}</span></span>
-                      <span style={{ color: '#c4b5fd', fontWeight: 600 }}>0% fees</span>
+                      <span style={{ color: '#c4b5fd', fontWeight: 600 }}>{tr.feeLabel ?? '0% fees'}</span>
                     </div>
 
                     <button onClick={() => isCopying ? setTab('active') : onClickCopy(tr)}
