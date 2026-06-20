@@ -271,6 +271,15 @@ export default function KYCPage() {
     }
   }
 
+  // ── Skip ─────────────────────────────────────────────────────────────────
+  // KYC is optional. Remember the choice so the route guard lets the user into
+  // the dashboard while their kycStatus is still NOT_SUBMITTED. They can finish
+  // verification later from Settings → KYC.
+  function handleSkip() {
+    try { localStorage.setItem('kyc_skipped', 'true') } catch { /* storage blocked — proceed anyway */ }
+    navigate('/dashboard', { replace: true })
+  }
+
   if (step === 'done') return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'hsl(260 87% 3%)' }}>
       <div className="max-w-md w-full text-center rounded-3xl p-10"
@@ -394,8 +403,18 @@ export default function KYCPage() {
               ? <><Loader2 size={16} className="animate-spin"/> Submitting…</>
               : <><ShieldCheck size={16}/> Submit for Verification</>}
           </button>
+
+          <button
+            onClick={handleSkip}
+            disabled={loading}
+            className="w-full max-w-md flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-all hover:bg-white/5 disabled:opacity-50"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'hsl(240 5% 65%)' }}>
+            Skip for now
+          </button>
+
           <p className="text-xs" style={{ color: 'hsl(240 5% 45%)' }}>
             By submitting you confirm all information is accurate.
+            You can verify later from Settings → KYC.
           </p>
         </div>
       </div>

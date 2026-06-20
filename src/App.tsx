@@ -115,7 +115,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // Banned users can only see the banned page
   if (user.status === 'BANNED') return <Navigate to="/banned" replace />
 
-  if (user.kycStatus === 'NOT_SUBMITTED') return <Navigate to="/kyc"         replace />
+  // KYC is optional: a user who chose "Skip for now" on the KYC page is allowed
+  // into the dashboard even though their kycStatus is still NOT_SUBMITTED. They
+  // can complete verification later from Settings → KYC.
+  const kycSkipped = (() => {
+    try { return localStorage.getItem('kyc_skipped') === 'true' } catch { return false }
+  })()
+
+  if (user.kycStatus === 'NOT_SUBMITTED' && !kycSkipped) return <Navigate to="/kyc" replace />
   if (user.kycStatus === 'PENDING')       return <Navigate to="/kyc-pending"  replace />
   if (user.kycStatus === 'REJECTED')      return <Navigate to="/kyc"          replace />
 
